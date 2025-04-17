@@ -1,0 +1,25 @@
+  @import './base.css';
+
+  #app {
+    max-width: 100%;
+    font-weight: normal;
+  }
+  @media (min-width: 1024px) {
+
+  }
+  html, body {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+  }
+
+  #app {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  router-view {
+    flex: 1;
+  }
+
