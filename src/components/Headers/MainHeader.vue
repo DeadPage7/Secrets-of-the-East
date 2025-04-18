@@ -1,27 +1,98 @@
 <template>
   <header class="header">
-    <!-- Панель навигации -->
     <div class="nav-bar">
       <div class="nav-left">
+        <!-- Название магазина -->
         <span class="store-name">Тайны Востока</span>
       </div>
       <div class="nav-center">
+        <!-- Ссылки для навигации -->
         <a href="#" class="nav-link">Пункт выдачи</a>
         <a href="#" class="nav-link">Корзина</a>
-        <a href="#" class="nav-link">Профиль</a>
+        <!-- Ссылка для открытия модального окна профиля -->
+        <a href="#" class="nav-link" @click.prevent="handleProfileClick">Профиль</a>
       </div>
       <div class="nav-right">
         <div class="search-container">
+          <!-- Поле для поиска -->
           <input type="text" class="search-input" placeholder="Поиск..." />
         </div>
+
+        <!-- Кнопка выхода, которая скрывается после выхода -->
+        <button v-if="isAuthenticated()" class="logout-button" @click="handleLogout">
+          Выйти
+        </button>
       </div>
     </div>
+
+    <!-- Модальные окна для регистрации, авторизации и профиля -->
+    <RegisterModal v-if="showRegister" @close="showRegister = false" @switchToLogin="switchToLogin" />
+    <LoginModal v-if="showLogin" @close="showLogin = false" @switchToRegister="switchToRegister" @loginSuccess="showProfileModal" />
+    <ProfileModal v-if="showProfile" @close="showProfile = false" @logout="handleLogout" />
   </header>
 </template>
 
 <script>
+import RegisterModal from "../auth/RegisterModal.vue";
+import LoginModal from "../auth/LoginModal.vue";
+import ProfileModal from "../auth/ProfileModal.vue";
+
 export default {
-  name: "HeaderWithInfo",
+  name: "MainHeader",
+  components: {
+    RegisterModal,
+    LoginModal,
+    ProfileModal,
+  },
+  data() {
+    return {
+      showRegister: false, // Состояние для модального окна регистрации
+      showLogin: false, // Состояние для модального окна входа
+      showProfile: false, // Состояние для модального окна профиля
+    };
+  },
+  methods: {
+    // Обработчик клика по ссылке "Профиль"
+    handleProfileClick() {
+      if (this.isAuthenticated()) {
+        // Если пользователь авторизован, показываем профиль
+        this.showProfile = true;
+      } else {
+        // Если пользователь не авторизован, показываем окно входа
+        this.showLogin = true;
+      }
+    },
+    // Проверка на аутентификацию (наличие токена в localStorage)
+    isAuthenticated() {
+      return localStorage.getItem("auth_token") !== null;
+    },
+    // Переключение на форму входа из формы регистрации
+    switchToLogin() {
+      this.showRegister = false;
+      this.showLogin = true;
+    },
+    // Переключение на форму регистрации из формы входа
+    switchToRegister() {
+      this.showLogin = false;
+      this.showRegister = true;
+    },
+    // Отображение модального окна профиля после успешного входа
+    showProfileModal() {
+      this.showLogin = false;
+      this.showProfile = true;
+    },
+    // Обработчик выхода из аккаунта
+    handleLogout() {
+      // Удаляем токен из localStorage
+      localStorage.removeItem("auth_token");
+      this.showProfile = false; // Закрываем модальное окно профиля
+
+      // Скрыть кнопку "Выйти" сразу после выхода
+      this.$nextTick(() => {
+        this.$forceUpdate(); // Принудительно перерисовываем компонент, чтобы скрыть кнопку
+      });
+    },
+  },
 };
 </script>
 
@@ -31,40 +102,41 @@ export default {
   display: flex;
   justify-content: center;
   align-items: center;
-  background-color: #222; /* Темно-серый фон */
+  background-color: #222;
   padding: 15px 30px;
-  position: fixed; /* Панель фиксируется сверху */
-  top: 0; /* Панель сверху */
-  left: 0; /* По левому краю */
-  right: 0; /* По правому краю */
-  z-index: 2; /* Чтобы панель была поверх других элементов */
-  animation: slideDown 0.5s ease-out; /* Плавное появление панели */
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 2;
+  animation: slideDown 0.5s ease-out; /* Анимация для панели навигации */
 }
 
-/* Шапка с темным фоном */
 .header {
-  background-color: #111; /* Темный фон */
-  color: #f5f5f5; /* Белый цвет текста */
+  background-color: #111;
+  color: #f5f5f5;
   padding: 0;
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-  position: relative; /* Для других элементов */
+  position: relative;
 }
 
-/* Стиль для всех элементов внутри навигации */
+/* Левый блок навигации с названием магазина */
 .nav-left {
   position: absolute;
   left: 30px;
 }
 
+/* Стили для названия магазина */
 .store-name {
   font-family: 'Inter', sans-serif;
   font-size: 24px;
   font-weight: bold;
   color: #fff;
   letter-spacing: 1px;
-  animation: fadeIn 1s ease-out; /* Плавное появление названия магазина */
+  animation: fadeIn 1s ease-out; /* Анимация появления */
 }
 
+/* Центровка элементов навигации */
 .nav-center {
   display: flex;
   gap: 30px;
@@ -72,6 +144,7 @@ export default {
   flex: 2;
 }
 
+/* Стили для ссылок в навигации */
 .nav-link {
   font-family: 'Inter', sans-serif;
   font-size: 20px;
@@ -79,11 +152,11 @@ export default {
   color: #fff;
   text-decoration: none;
   position: relative;
-  transition: color 0.3s ease, transform 0.3s ease; /* Плавный переход */
+  transition: color 0.3s ease, transform 0.3s ease;
 }
 
 .nav-link:hover {
-  color: #5c6bc0; /* Цвет акцента */
+  color: #5c6bc0; /* Цвет при наведении */
   transform: scale(1.1); /* Увеличение при наведении */
 }
 
@@ -94,7 +167,7 @@ export default {
   left: 0;
   width: 100%;
   height: 2px;
-  background-color: #5c6bc0; /* Акцентный цвет */
+  background-color: #5c6bc0;
   transform: scaleX(0);
   transform-origin: bottom right;
   transition: transform 0.3s ease;
@@ -105,6 +178,7 @@ export default {
   transform-origin: bottom left;
 }
 
+/* Правый блок с поиском и кнопкой выхода */
 .nav-right {
   position: absolute;
   right: 30px;
@@ -115,34 +189,50 @@ export default {
 .search-container {
   display: flex;
   align-items: center;
-  background-color: #333; /* Темный фон для контейнера поиска */
+  background-color: #333;
   border-radius: 25px;
   padding: 5px 15px;
   border: 1px solid #444;
-  animation: fadeIn 1s ease-out; /* Плавное появление контейнера поиска */
+  animation: fadeIn 1s ease-out; /* Анимация появления поиска */
 }
 
-/* Поле ввода поиска */
 .search-input {
-  background-color: transparent; /* Прозрачный фон */
-  color: #fff; /* Белый цвет текста */
+  background-color: transparent;
+  color: #fff;
   border: none;
   outline: none;
   padding: 8px 10px;
   font-size: 16px;
-  width: 200px; /* Установим ширину */
-  transition: width 0.3s ease; /* Плавное расширение поля ввода */
+  width: 200px;
+  transition: width 0.3s ease; /* Плавное расширение поля поиска */
 }
 
 .search-input::placeholder {
-  color: #ccc; /* Цвет для placeholder */
+  color: #ccc;
 }
 
 .search-input:focus {
-  width: 250px; /* Расширение поля при фокусе */
+  width: 250px; /* Расширение поля поиска при фокусе */
 }
 
-/* Анимации */
+/* Кнопка "Выход" */
+.logout-button {
+  background-color: #5c6bc0;
+  color: white;
+  border: none;
+  border-radius: 20px;
+  padding: 8px 16px;
+  margin-left: 20px;
+  font-size: 16px;
+  cursor: pointer;
+  transition: background-color 0.3s ease, transform 0.2s ease;
+}
+
+.logout-button:hover {
+  background-color: #3f51b5;
+  transform: scale(1.05); /* Увеличение кнопки при наведении */
+}
+
 @keyframes slideDown {
   from {
     opacity: 0;

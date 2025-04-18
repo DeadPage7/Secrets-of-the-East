@@ -1,6 +1,7 @@
 <template>
   <div id="app">
     <MainHeader />
+    <GlobalLoading />
     <router-view />
     <MainFooter />
   </div>
@@ -9,8 +10,9 @@
 <script setup>
 import MainHeader from './components/Headers/MainHeader.vue'
 import MainFooter from './components/MainFooter.vue'
-import HeaderInfo from "@/components/Headers/HeaderInfo.vue";
+import GlobalLoading from "@/components/different/GlobalLoading.vue";
 </script>
+
 
 <style>
 html, body, #app {
