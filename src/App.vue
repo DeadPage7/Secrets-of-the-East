@@ -1,8 +1,9 @@
 <template>
-  <div id="app">
+  <div id="app" class="app-wrapper">
     <MainHeader />
-    <GlobalLoading />
-    <router-view />
+    <main class="main-content">
+      <router-view />
+    </main>
     <MainFooter />
   </div>
 </template>
@@ -10,24 +11,30 @@
 <script setup>
 import MainHeader from './components/Headers/MainHeader.vue'
 import MainFooter from './components/MainFooter.vue'
-import GlobalLoading from "@/components/different/GlobalLoading.vue";
 </script>
 
-
 <style>
-html, body, #app {
+html, body {
   margin: 0;
   padding: 0;
-  width: 100%;
   height: 100%;
+  width: 100%;
   box-sizing: border-box;
 }
 
 body {
   font-family: sans-serif;
+  background-color: #0f0f1f;
 }
 
-* {
+*, *::before, *::after {
   box-sizing: inherit;
 }
+
+#app.app-wrapper {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
 </style>
+

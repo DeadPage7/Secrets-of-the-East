@@ -1,21 +1,28 @@
 <template>
-  <HeaderInfo/>
+  <HeaderInfo></HeaderInfo>
   <div class="home-container">
     <!-- Левая часть — фильтрация -->
-    <ProductFilter />
+    <ProductFilter @filter-changed="handleFilterChange" />
 
     <!-- Правая часть — карточки товаров -->
     <div class="products-section">
-      <ProductCards />
+      <ProductCards :filters="activeFilters" />
     </div>
   </div>
 </template>
 
 <script setup>
+import {ref} from 'vue'
 import ProductFilter from '@/components/Product/ProductFilter.vue'
 import ProductCards from '@/components/Product/ProductCards.vue'
 import HeaderInfo from "@/components/Headers/HeaderInfo.vue";
+const activeFilters = ref({});
+
+const handleFilterChange = (filters) => {
+  activeFilters.value = filters;
+};
 </script>
+
 
 <style scoped>
 .home-container {

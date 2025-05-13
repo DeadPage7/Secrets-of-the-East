@@ -1,370 +1,367 @@
 <template>
-  <div class="product-container">
-    <div class="product-grid" ref="productsGrid">
+  <div class="products-container">
+    <!-- Состояние загрузки -->
+    <div v-if="loading" class="loading-overlay">
+      <div class="loader"></div>
+    </div>
+
+    <!-- Сообщение если нет товаров -->
+    <div v-if="!loading && products.length === 0" class="no-products">
+      <h3>Товары не найдены</h3>
+      <p>Попробуйте изменить параметры фильтрации</p>
+    </div>
+
+    <!-- Сетка товаров -->
+    <div v-else class="products-grid">
       <div
         v-for="product in paginatedProducts"
         :key="product.id"
         class="product-card"
-        @mouseenter="hoverCard = product.id"
-        @mouseleave="hoverCard = null"
+        @click="goToProduct(product.id)"
       >
-        <router-link :to="`/product/${product.id}`" class="product-link">
-          <div class="image-container">
-            <img
-              :src="getImageUrl(product.photo)"
-              :alt="product.name"
-              class="product-image"
-              :class="{ 'image-zoom': hoverCard === product.id }"
-              @error="handleImageError"
-              loading="lazy"
-            />
-            <div class="product-rating">
-              <span v-for="n in 5" :key="n" class="star" :class="{ 'filled': n <= product.rating }">★</span>
-            </div>
+        <div class="product-badge" v-if="product.discount">
+          -{{ product.discount }}%
+        </div>
+        <div class="product-image-container">
+          <img
+            :src="getImageUrl(product.photo)"
+            :alt="product.name"
+            class="product-image"
+            @error="handleImageError"
+          />
+        </div>
+        <div class="product-info">
+          <h3 class="product-name">{{ product.name }}</h3>
+          <div class="product-meta">
+            <span class="product-country">{{ product.country?.name }}</span>
+            <span class="product-category">{{ product.category?.name }}</span>
           </div>
-          <div class="product-info">
-            <h3 class="product-name">{{ product.name }}</h3>
-            <div class="price-container">
-              <p class="product-price">{{ product.price.toLocaleString() }} ₽</p>
-            </div>
+          <div class="product-price">
+            <span class="current-price">{{ formatPrice(calculatePrice(product)) }}</span>
+            <span v-if="product.discount" class="old-price">{{ formatPrice(product.price) }}</span>
           </div>
-        </router-link>
+        </div>
       </div>
     </div>
 
     <!-- Пагинация -->
-    <div class="pagination" v-if="totalPages > 1">
+    <div v-if="totalPages > 1 && !loading" class="pagination">
       <button
-        @click="changePage(currentPage - 1)"
+        @click="prevPage"
         :disabled="currentPage === 1"
-        class="pagination-button"
+        class="pagination-btn"
       >
-        ← Назад
+        &lt;
       </button>
 
-      <div class="pagination-pages">
-        <button
-          v-for="page in visiblePages"
-          :key="page"
-          @click="changePage(page)"
-          :class="{ active: currentPage === page }"
-          class="pagination-button"
-        >
-          {{ page }}
-        </button>
-      </div>
+      <button
+        v-for="page in visiblePages"
+        :key="page"
+        @click="goToPage(page)"
+        :class="{ active: currentPage === page }"
+        class="pagination-btn"
+      >
+        {{ page }}
+      </button>
 
       <button
-        @click="changePage(currentPage + 1)"
+        @click="nextPage"
         :disabled="currentPage === totalPages"
-        class="pagination-button"
+        class="pagination-btn"
       >
-        Вперед →
+        &gt;
       </button>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue';
+import { ref, computed, onMounted, watch, defineProps } from 'vue';
+import { useRouter } from 'vue-router';
 import api from "@/services/api";
-import { useRoute, useRouter } from 'vue-router';
 
-const route = useRoute();
 const router = useRouter();
-const productsGrid = ref(null);
-
-// Данные
-const products = ref([]);
-const itemsPerPage = 12;
-const currentPage = ref(parseInt(route.query.page) || 1);
-const hoverCard = ref(null);
-
-// Базовый URL для изображений
-const baseImageUrl = import.meta.env.VITE_IMAGE_BASE_URL || 'http://localhost:8000';
-
-// Методы
-const getImageUrl = (photoPath) => {
-  if (!photoPath) return '';
-  if (photoPath.startsWith('http')) return photoPath;
-  if (photoPath.startsWith('/storage')) return `${baseImageUrl}${photoPath}`;
-  return `${baseImageUrl}/storage/${photoPath}`;
-};
-
-const handleImageError = (event) => {
-  event.target.src = 'https://via.placeholder.com/300x300?text=No+Image';
-  event.target.onerror = null;
-};
-
-const scrollToProducts = () => {
-  if (productsGrid.value) {
-    const topOffset = productsGrid.value.getBoundingClientRect().top + window.pageYOffset - 20;
-    window.scrollTo({
-      top: topOffset,
-      behavior: 'smooth'
-    });
+const props = defineProps({
+  filters: {
+    type: Object,
+    default: () => ({})
   }
-};
-
-const fetchProducts = async () => {
-  try {
-    const response = await api.get('/product');
-    products.value = response.data.map(product => ({
-      ...product,
-      rating: product.rating || Math.floor(Math.random() * 5) + 1
-    }));
-  } catch (error) {
-    console.error('Ошибка при загрузке товаров:', error);
-  }
-};
-
-// Пагинация
-const paginatedProducts = computed(() => {
-  const startIndex = (currentPage.value - 1) * itemsPerPage;
-  return products.value.slice(startIndex, startIndex + itemsPerPage);
 });
 
+const products = ref([]);
+const loading = ref(false);
+const currentPage = ref(1);
+const totalProducts = ref(0);
+const itemsPerPage = 12;
+
+const fetchProducts = async () => {
+  loading.value = true;
+  try {
+    const params = {
+      ...props.filters,
+      page: currentPage.value,
+      per_page: itemsPerPage
+    };
+
+    // Удаляем пустые параметры
+    Object.keys(params).forEach(key => {
+      if (params[key] === null || params[key] === undefined || params[key] === '') {
+        delete params[key];
+      }
+    });
+
+    const response = await api.get('/products/filter', { params });
+    products.value = response.data.data || response.data;
+    totalProducts.value = response.data.count || products.value.length;
+  } catch (error) {
+    console.error('Ошибка при загрузке товаров:', error);
+    products.value = [];
+    totalProducts.value = 0;
+  } finally {
+    loading.value = false;
+  }
+};
+
 const totalPages = computed(() => Math.ceil(products.value.length / itemsPerPage));
+const paginatedProducts = computed(() => products.value.slice((currentPage.value - 1) * itemsPerPage, currentPage.value * itemsPerPage));
 
 const visiblePages = computed(() => {
-  let pages = [];
-  const total = totalPages.value;
-  const current = currentPage.value;
-  const delta = 2;
+  const pages = [];
+  const maxVisible = 5;
+  let start = Math.max(1, currentPage.value - Math.floor(maxVisible / 2));
+  let end = Math.min(totalPages.value, start + maxVisible - 1);
 
-  if (total <= 7) {
-    pages = Array.from({ length: total }, (_, i) => i + 1);
-  } else {
-    pages.push(1);
+  if (end - start + 1 < maxVisible) {
+    start = Math.max(1, end - maxVisible + 1);
+  }
 
-    if (current > delta + 2) {
-      pages.push('...');
-    }
-
-    for (
-      let i = Math.max(2, current - delta);
-      i <= Math.min(total - 1, current + delta);
-      i++
-    ) {
-      pages.push(i);
-    }
-
-    if (current < total - delta - 1) {
-      pages.push('...');
-    }
-
-    if (total > 1) {
-      pages.push(total);
-    }
+  for (let i = start; i <= end; i++) {
+    pages.push(i);
   }
 
   return pages;
 });
 
-const changePage = (page) => {
-  if (page === '...' || page < 1 || page > totalPages.value) return;
-
+const goToPage = (page) => {
   currentPage.value = page;
-  router.push({ query: { ...route.query, page } });
-  scrollToProducts();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
 };
 
-// Следим за изменением page в URL
-watch(
-  () => route.query.page,
-  (newPage) => {
-    const page = parseInt(newPage) || 1;
-    if (page !== currentPage.value) {
-      currentPage.value = page;
-      scrollToProducts();
-    }
+const prevPage = () => {
+  if (currentPage.value > 1) {
+    currentPage.value--;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
-);
+};
+
+const nextPage = () => {
+  if (currentPage.value < totalPages.value) {
+    currentPage.value++;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+};
+
+const getImageUrl = (path) => {
+  if (!path) return '/placeholder-product.jpg';
+  if (path.startsWith('http')) return path;
+  return `http://secrets-of-the-east.ru/storage/${path}`;
+};
+
+const handleImageError = (e) => {
+  e.target.src = '/placeholder-product.jpg';
+};
+
+const formatPrice = (price) => {
+  return new Intl.NumberFormat('ru-RU', {
+    style: 'currency',
+    currency: 'RUB',
+    maximumFractionDigits: 0
+  }).format(price);
+};
+
+const calculatePrice = (product) => {
+  return product.discount ? product.price * (1 - product.discount / 100) : product.price;
+};
+
+const goToProduct = (id) => {
+  router.push(`/product/${id}`);
+};
+
+watch(() => props.filters, () => {
+  currentPage.value = 1;
+  fetchProducts();
+}, { deep: true });
 
 onMounted(() => {
   fetchProducts();
 });
+
 </script>
 
 <style scoped>
-/* Базовые сбросы */
-.product-container *,
-.product-container *::before,
-.product-container *::after {
-  text-decoration: none;
-}
-
-.product-container {
-  min-height: 70vh;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
+/* Контейнер с товарами */
+.products-container {
+  position: relative;
+  min-height: 500px;
+  background-color: #1a1a2e; /* Темный фон */
+  color: #f7f7f7; /* Светлый текст */
+  padding: 20px;
+  border-radius: 16px;
 }
 
 /* Сетка товаров */
-.product-grid {
+.products-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 30px;
-  padding: 40px 20px;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 25px;
+  padding: 20px 0;
 }
 
 /* Карточка товара */
 .product-card {
-  border-radius: 16px;
+  background: #2a2a40; /* Темный фон для карточек */
+  border-radius: 12px;
   overflow: hidden;
-  background-color: #222;
-  transition: all 0.3s ease;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 6px 15px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s ease, box-shadow 0.3s ease, opacity 0.3s ease;
+  cursor: pointer;
   position: relative;
+  color: #f7f7f7; /* Светлый текст */
+  padding: 10px;
 }
 
+/* Эффект наведения на карточку */
 .product-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.2);
+  transform: translateY(-10px);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.15);
+  opacity: 0.9;
+  background: #333c55; /* Темно-синий фон при наведении */
 }
 
-/* Изображение */
-.image-container {
+/* Контейнер изображения товара */
+.product-image-container {
   position: relative;
+  height: 250px;
   overflow: hidden;
-  height: 300px;
+  border-radius: 12px;
 }
 
+/* Стиль для самого изображения */
 .product-image {
   width: 100%;
   height: 100%;
   object-fit: cover;
   transition: transform 0.5s ease;
+  border-radius: 12px;
 }
 
+/* Эффект увеличения изображения при наведении */
 .product-card:hover .product-image {
-  transform: scale(1.03);
+  transform: scale(1.1);
+  z-index: 1;
 }
 
-/* Рейтинг */
-.product-rating {
-  position: absolute;
-  bottom: 10px;
-  left: 10px;
-  background-color: rgba(0, 0, 0, 0.7);
-  padding: 5px 10px;
-  border-radius: 20px;
-  display: flex;
-  gap: 3px;
-}
-
-.star {
-  color: #777;
-  font-size: 16px;
-}
-
-.star.filled {
-  color: #f39c12;
-}
-
-/* Информация о товаре */
+/* Стиль для информации о товаре */
 .product-info {
-  padding: 20px;
-  text-align: center;
+  padding: 15px;
+  text-align: left;
 }
 
 .product-name {
   font-size: 18px;
-  margin-bottom: 15px;
+  margin: 10px 0;
+  color: #f7f7f7; /* Светлый текст */
   font-weight: 600;
-  color: #fff;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-  min-height: 44px;
+  transition: color 0.3s ease;
 }
 
-.price-container {
+/* Эффект для названия товара при наведении */
+.product-card:hover .product-name {
+  color: #ff85c1; /* Неоновый розовый для названия */
+}
+
+/* Мета информация о товаре */
+.product-meta {
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  position: relative;
+  justify-content: space-between;
+  font-size: 14px;
+  color: #ccc; /* Светло-серый цвет */
+  margin-bottom: 15px;
 }
 
-.product-price {
-  font-size: 18px;
-  color: #fff;
-  font-weight: bold;
-}
-
-/* Пагинация */
+/* Стиль для пагинации */
 .pagination {
   display: flex;
   justify-content: center;
-  align-items: center;
-  gap: 8px;
-  margin: 30px 0;
-  flex-wrap: wrap;
-  padding: 0 20px;
+  gap: 5px;
+  margin-top: 30px;
+  padding-bottom: 30px;
 }
 
-.pagination-pages {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  justify-content: center;
-}
-
-.pagination-button {
-  background-color: #444;
-  border: none;
-  padding: 10px 16px;
-  color: #fff;
+.pagination-btn {
+  width: 40px;
+  height: 40px;
+  border: 1px solid #444; /* Темные границы */
+  background: #2a2a40; /* Темный фон для кнопок */
+  color: #f7f7f7; /* Светлый текст */
+  border-radius: 5px;
   cursor: pointer;
-  border-radius: 8px;
-  transition: all 0.2s ease;
-  min-width: 40px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 16px;
+  transition: all 0.3s ease;
 }
 
-.pagination-button:hover:not(:disabled) {
-  background-color: #555;
+/* Эффект наведения для кнопок пагинации */
+.pagination-btn:hover:not(:disabled) {
+  background: #3a3a57; /* Темно-синий фон при наведении */
 }
 
-.pagination-button.active {
-  background-color: #f39c12;
+/* Активная кнопка пагинации */
+.pagination-btn.active {
+  background: #ff85c1; /* Неоновый розовый для активной кнопки */
+  color: white;
+  border-color: #ff85c1;
 }
 
-.pagination-button:disabled {
-  background-color: #888;
+.pagination-btn:disabled {
+  opacity: 0.5;
   cursor: not-allowed;
-  opacity: 0.7;
 }
 
-/* Адаптивность */
-@media (max-width: 768px) {
-  .product-grid {
-    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-    gap: 20px;
-    padding: 20px 10px;
-  }
+/* Стиль для состояния загрузки */
+.loading-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5); /* Полупрозрачный черный фон */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 10;
+}
 
-  .pagination-button {
-    padding: 8px 12px;
-    min-width: 32px;
-    font-size: 14px;
-  }
+.loader {
+  border: 5px solid #f3f3f3;
+  border-top: 5px solid #ff85c1; /* Неоновый розовый для загрузки */
+  border-radius: 50%;
+  width: 50px;
+  height: 50px;
+  animation: spin 1s linear infinite;
+}
 
-  .image-container {
-    height: 220px;
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
   }
+  100% {
+    transform: rotate(360deg);
+  }
+}
 
-  .product-rating {
-    padding: 3px 8px;
-  }
-
-  .star {
-    font-size: 14px;
-  }
+/* Сообщение, если нет товаров */
+.no-products {
+  text-align: center;
+  padding: 50px 20px;
+  color: #f7f7f7; /* Светлый текст */
 }
 </style>

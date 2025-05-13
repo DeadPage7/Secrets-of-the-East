@@ -97,46 +97,45 @@ export default {
 </script>
 
 <style scoped>
-/* Панель навигации */
+  /* Панель навигации */
 .nav-bar {
   display: flex;
   justify-content: center;
   align-items: center;
-  background-color: #222;
+  background-color: #1a1a2e;
   padding: 15px 30px;
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   z-index: 2;
-  animation: slideDown 0.5s ease-out; /* Анимация для панели навигации */
+  animation: slideDown 0.5s ease-out;
 }
 
 .header {
-  background-color: #111;
-  color: #f5f5f5;
+  background-color: #0f0f1f;
+  color: #ffffff;
   padding: 0;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 12px rgba(200, 75, 158, 0.4);
   position: relative;
 }
 
-/* Левый блок навигации с названием магазина */
+/* Левый блок */
 .nav-left {
   position: absolute;
   left: 30px;
 }
 
-/* Стили для названия магазина */
 .store-name {
   font-family: 'Inter', sans-serif;
   font-size: 24px;
   font-weight: bold;
-  color: #fff;
+  color: #ffffff;
   letter-spacing: 1px;
-  animation: fadeIn 1s ease-out; /* Анимация появления */
+  animation: fadeIn 1s ease-out;
 }
 
-/* Центровка элементов навигации */
+/* Центровка навигации */
 .nav-center {
   display: flex;
   gap: 30px;
@@ -144,20 +143,20 @@ export default {
   flex: 2;
 }
 
-/* Стили для ссылок в навигации */
+/* Ссылки навигации */
 .nav-link {
   font-family: 'Inter', sans-serif;
   font-size: 20px;
   font-weight: 400;
-  color: #fff;
+  color: #ffffff;
   text-decoration: none;
   position: relative;
   transition: color 0.3s ease, transform 0.3s ease;
 }
 
 .nav-link:hover {
-  color: #5c6bc0; /* Цвет при наведении */
-  transform: scale(1.1); /* Увеличение при наведении */
+  color: #c84b9e;
+  transform: scale(1.1);
 }
 
 .nav-link:after {
@@ -167,7 +166,7 @@ export default {
   left: 0;
   width: 100%;
   height: 2px;
-  background-color: #5c6bc0;
+  background-color: #ff85c1;
   transform: scaleX(0);
   transform-origin: bottom right;
   transition: transform 0.3s ease;
@@ -178,7 +177,7 @@ export default {
   transform-origin: bottom left;
 }
 
-/* Правый блок с поиском и кнопкой выхода */
+/* Правый блок */
 .nav-right {
   position: absolute;
   right: 30px;
@@ -189,22 +188,22 @@ export default {
 .search-container {
   display: flex;
   align-items: center;
-  background-color: #333;
+  background-color: #2a2a40;
   border-radius: 25px;
   padding: 5px 15px;
   border: 1px solid #444;
-  animation: fadeIn 1s ease-out; /* Анимация появления поиска */
+  animation: fadeIn 1s ease-out;
 }
 
 .search-input {
   background-color: transparent;
-  color: #fff;
+  color: #ffffff;
   border: none;
   outline: none;
   padding: 8px 10px;
   font-size: 16px;
   width: 200px;
-  transition: width 0.3s ease; /* Плавное расширение поля поиска */
+  transition: width 0.3s ease;
 }
 
 .search-input::placeholder {
@@ -212,12 +211,11 @@ export default {
 }
 
 .search-input:focus {
-  width: 250px; /* Расширение поля поиска при фокусе */
+  width: 250px;
 }
 
-/* Кнопка "Выход" */
 .logout-button {
-  background-color: #5c6bc0;
+  background-color: #c84b9e;
   color: white;
   border: none;
   border-radius: 20px;
@@ -229,10 +227,11 @@ export default {
 }
 
 .logout-button:hover {
-  background-color: #3f51b5;
-  transform: scale(1.05); /* Увеличение кнопки при наведении */
+  background-color: #ff85c1;
+  transform: scale(1.05);
 }
 
+/* Анимации */
 @keyframes slideDown {
   from {
     opacity: 0;
@@ -253,3 +252,5 @@ export default {
   }
 }
 </style>
+
+

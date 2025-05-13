@@ -2,250 +2,197 @@
   <div class="filter-container">
     <h2>Фильтры</h2>
 
-    <!-- Категории с раскрывающимся списком -->
-    <div class="filter-section">
+    <!-- Фильтр по категориям -->
+    <div class="filter-section" :class="sectionClass">
       <h3>Категории</h3>
-      <ul class="category-list">
-        <li v-for="(category, index) in categories" :key="index">
-          <div class="category-header" @click="toggleCategory(index)">
-            {{ category.name }}
-            <span class="arrow" :class="{ open: category.open }">▶</span>
-          </div>
-          <ul v-if="category.open" class="subcategory-list">
-            <li v-for="(sub, i) in category.subcategories" :key="i">{{ sub }}</li>
-          </ul>
-        </li>
-      </ul>
+      <select v-model="selectedCategory" class="filter-select">
+        <option value="">Все категории</option>
+        <option v-for="category in categories" :key="category.id" :value="category.id">
+          {{ category.name }}
+        </option>
+      </select>
     </div>
 
-    <!-- Фильтр по цене (ввод вручную) -->
-    <div class="filter-section">
-      <h3>Цена</h3>
-      <div class="price-inputs">
-        <input
-          type="number"
-          v-model="priceFrom"
-          :min="minPrice"
-          :max="priceTo"
-          @input="validatePriceRange"
-          placeholder="От"
-        />
-        <span>-</span>
-        <input
-          type="number"
-          v-model="priceTo"
-          :min="priceFrom"
-          :max="maxPrice"
-          @input="validatePriceRange"
-          placeholder="До"
-        />
-      </div>
-      <div class="price-values">
-        <span>{{ priceFrom }} ₽</span>
-        <span>{{ priceTo }} ₽</span>
-      </div>
-    </div>
-
-    <!-- Цвет -->
-    <div class="filter-section">
-      <h3>Цвет</h3>
-      <div class="color-options">
-        <div
-          v-for="color in colors"
-          :key="color.name"
-          class="color-circle"
-          :style="{
-            backgroundColor: color.value,
-            border: selectedColors.includes(color.name)
-              ? '3px solid #5C6BC0'
-              : '1px solid #333'
-          }"
-          @click="toggleColor(color.name)"
-        >
-          <span v-if="selectedColors.includes(color.name)">✔</span>
-        </div>
-      </div>
-    </div>
-
-    <!-- Размер -->
-    <div class="filter-section">
-      <h3>Размер</h3>
-      <div class="size-options">
-        <div
-          v-for="size in sizes"
-          :key="size"
-          class="size-box"
-          :class="{ selected: selectedSizes.includes(size) }"
-          @click="toggleSize(size)"
-        >
-          {{ size }}
-        </div>
-      </div>
+    <!-- Фильтр по странам -->
+    <div class="filter-section" :class="sectionClass">
+      <h3>Страны</h3>
+      <select v-model="selectedCountry" class="filter-select">
+        <option value="">Все страны</option>
+        <option v-for="country in countries" :key="country.id" :value="country.id">
+          {{ country.name }}
+        </option>
+      </select>
     </div>
 
     <!-- Фильтр по полу -->
-    <div class="filter-section">
+    <div class="filter-section" :class="sectionClass">
       <h3>Пол</h3>
-      <div class="gender-options">
-        <div
-          v-for="gender in genders"
-          :key="gender"
-          class="gender-box"
-          :class="{ selected: selectedGender === gender }"
-          @click="toggleGender(gender)"
-        >
-          {{ gender }}
+      <select v-model="selectedGender" class="filter-select">
+        <option value="">Все полы</option>
+        <option value="0">Мужской</option>
+        <option value="1">Женский</option>
+      </select>
+    </div>
+
+    <!-- Фильтр по цене -->
+    <div class="filter-section" :class="sectionClass">
+      <h3>Цена</h3>
+      <div class="price-range">
+        <div class="price-inputs">
+          <input
+            type="number"
+            v-model="priceRange[0]"
+            :min="minPrice"
+            :max="maxPrice"
+            @input="updatePriceText"
+            class="price-input"
+            placeholder="От"
+          />
+          <span>—</span>
+          <input
+            type="number"
+            v-model="priceRange[1]"
+            :min="minPrice"
+            :max="maxPrice"
+            @input="updatePriceText"
+            class="price-input"
+            placeholder="До"
+          />
+        </div>
+        <div class="price-values">
+          <span>{{ priceRange[0] }} ₽</span>
+          <span>{{ priceRange[1] }} ₽</span>
         </div>
       </div>
     </div>
 
-    <!-- Кнопка применить фильтры -->
-    <div class="apply-filters">
-      <button class="button" @click="applyFilters">Применить фильтры</button>
-    </div>
+    <button @click="applyFilters" class="apply-btn">Применить фильтры</button>
+    <button @click="resetFilters" class="reset-btn">Сбросить фильтры</button>
   </div>
 </template>
+
 <script setup>
-import { ref } from 'vue';
+import { ref, onMounted } from 'vue'
+import api from "@/services/api";
 
-// Пример тестовых категорий
-const categories = ref([
-  {
-    name: 'Платья',
-    open: false,
-    subcategories: ['Летние', 'Офисные', 'Вечерние'],
-  },
-  {
-    name: 'Куртки',
-    open: false,
-    subcategories: ['Демисезонные', 'Зимние', 'Легкие'],
-  },
-  {
-    name: 'Худи',
-    open: false,
-    subcategories: ['Мужские', 'Женские'],
-  },
-]);
+const selectedCategory = ref('')
+const selectedCountry = ref('')
+const selectedGender = ref('')
+const priceRange = ref([0, 100000])
+const minPrice = 0
+const maxPrice = 100000
 
-const colors = ref([
-  { name: 'Черный', value: '#111' },
-  { name: 'Белый', value: '#fff' },
-  { name: 'Красный', value: '#e53935' },
-]);
+const categories = ref([])
+const countries = ref([])
 
-const sizes = ref(['S', 'M', 'L', 'XL']);
-const genders = ref(['Мужской', 'Женский', 'Унисекс']);
+const emit = defineEmits(['filter-changed'])
 
-const priceFrom = ref(1000);
-const priceTo = ref(10000);
-const minPrice = 0;
-const maxPrice = 100000;
-const selectedColors = ref([]);
-const selectedSizes = ref([]);
-const selectedGender = ref('Мужской');
 
-// Функции фильтрации
-function toggleCategory(index) {
-  categories.value[index].open = !categories.value[index].open;
-}
-
-function validatePriceRange() {
-  if (priceFrom.value > priceTo.value) {
-    priceFrom.value = priceTo.value;
-  }
-  if (priceFrom.value < minPrice) {
-    priceFrom.value = minPrice;
-  }
-  if (priceTo.value > maxPrice) {
-    priceTo.value = maxPrice;
+const loadFilterData = async () => {
+  try {
+    const [cats, cntrs] = await Promise.all([
+      api.get('/category'),
+      api.get('/country')
+    ])
+    categories.value = cats.data
+    countries.value = cntrs.data
+  } catch (error) {
+    console.error('Ошибка загрузки фильтров:', error)
   }
 }
 
-function toggleColor(colorName) {
-  if (selectedColors.value.includes(colorName)) {
-    selectedColors.value = selectedColors.value.filter(
-      (color) => color !== colorName
-    );
-  } else {
-    selectedColors.value.push(colorName);
+const applyFilters = () => {
+  const filters = {
+    category_id: selectedCategory.value || null,
+    country_id: selectedCountry.value || null,
+    min_price: priceRange.value[0] !== minPrice ? priceRange.value[0] : null,
+    max_price: priceRange.value[1] !== maxPrice ? priceRange.value[1] : null,
+    sex: selectedGender.value || null // Используем 'sex' вместо 'gender' для соответствия API
+  }
+
+  const cleanFilters = Object.fromEntries(
+    Object.entries(filters).filter(([_, value]) => value !== null && value !== undefined)
+  );
+
+  emit('filter-changed', cleanFilters)
+}
+
+const resetFilters = () => {
+  selectedCategory.value = ''
+  selectedCountry.value = ''
+  selectedGender.value = ''
+  priceRange.value = [minPrice, maxPrice]
+  emit('filter-changed', {
+    category_id: '',
+    country_id: '',
+    price_min: minPrice,
+    price_max: maxPrice,
+    sex: ''
+  })
+}
+
+const updatePriceText = () => {
+  if (priceRange.value[0] > priceRange.value[1]) {
+    priceRange.value[0] = priceRange.value[1]
   }
 }
 
-function toggleSize(size) {
-  if (selectedSizes.value.includes(size)) {
-    selectedSizes.value = selectedSizes.value.filter((s) => s !== size);
-  } else {
-    selectedSizes.value.push(size);
-  }
-}
+onMounted(() => {
+  loadFilterData()
+})
 
-function toggleGender(gender) {
-  selectedGender.value = gender;
-}
-
-function applyFilters() {
-  console.log("Фильтры применены:");
-  console.log("Категории:", categories.value);
-  console.log("Цена от:", priceFrom.value);
-  console.log("Цена до:", priceTo.value);
-  console.log("Цвета:", selectedColors.value);
-  console.log("Размеры:", selectedSizes.value);
-  console.log("Пол:", selectedGender.value);
-}
+const sectionClass = 'filter-section-anim' // Добавление класса для анимации
 </script>
+
 <style scoped>
+/* Основной контейнер */
 .filter-container {
-  background-color: #1c1c1c; /* Темно-серый фон */
+  background: #1a1a2e; /* Темный фон */
+  color: #f7f7f7; /* Светлый текст */
+  border-radius: 12px;
   padding: 20px;
-  border-radius: 16px;
-  animation: fadeIn 0.5s ease-out; /* Плавное появление контейнера */
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+  animation: fadeIn 0.8s ease-out;
 }
 
+/* Элементы фильтров */
 .filter-section {
   margin-bottom: 20px;
+  opacity: 0;
+  animation: fadeInUp 0.6s forwards;
+  transition: all 0.3s ease;
 }
 
-.filter-section h3 {
-  color: #fff;
-  font-size: 18px;
+/* Выделение элементов фильтров */
+.filter-select {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #444;
+  border-radius: 6px;
+  background: #2a2a40; /* Тёмный фон для инпутов */
+  color: #f7f7f7; /* Светлый текст */
+  transition: background-color 0.3s ease;
 }
 
-.category-list {
-  list-style: none;
-  padding: 0;
+/* Активные и фокусные состояния */
+.filter-select:hover {
+  background: #333;
 }
 
-.category-header {
-  display: flex;
-  justify-content: space-between; /* Стрелочка в конце */
-  align-items: center;
-  color: #bbb;
-  font-size: 16px;
-  cursor: pointer;
-  padding: 5px 0;
-  transition: color 0.3s ease;
+.filter-select:focus {
+  border-color: #ff85c1; /* Неоновый розовый для фокуса */
+  background: #333;
 }
 
-.category-header:hover {
-  color: #5c6bc0; /* Акцентный цвет при наведении */
+/* Рамки и фон в элементах списка */
+.filter-select option {
+  background: #2a2a40; /* Тёмный фон */
+  color: #f7f7f7; /* Светлый текст */
 }
 
-.arrow {
-  transition: transform 0.3s ease; /* Плавное вращение стрелочки */
-}
-
-.arrow.open {
-  transform: rotate(90deg); /* Стрелочка поворачивается на 90 градусов */
-}
-
-.subcategory-list {
-  list-style: none;
-  padding: 0;
-  margin-top: 10px;
-}
-
-.subcategory-list li {
-  color: #ccc;
+/* Диапазон цен */
+.price-range {
+  padding: 10px 0;
 }
 
 .price-inputs {
@@ -254,127 +201,78 @@ function applyFilters() {
   gap: 10px;
 }
 
-.price-inputs input {
-  width: 45%;
-  padding: 8px;
-  border: 1px solid #333;
-  border-radius: 8px;
-  background-color: #333;
-  color: #fff;
+/* Инпуты для диапазона цен */
+.price-input {
+  width: 48%;
+  padding: 10px;
+  border: 1px solid #444;
+  background: #2a2a40;
+  color: #f7f7f7;
+  border-radius: 6px;
+  transition: background-color 0.3s ease;
+}
+
+.price-input:hover {
+  background: #333;
 }
 
 .price-values {
   display: flex;
   justify-content: space-between;
-  color: #ccc;
+  margin-top: 5px;
+  font-size: 14px;
+}
+
+/* Кнопки */
+button {
+  width: 100%;
+  padding: 10px;
   margin-top: 10px;
-}
-
-.color-options {
-  display: flex;
-  gap: 10px;
-}
-
-.color-circle {
-  width: 30px;
-  height: 30px;
-  border-radius: 50%;
-  cursor: pointer;
-  transition: transform 0.3s ease, border 0.3s ease;
-}
-
-.color-circle:hover {
-  transform: scale(1.2); /* Масштабирование при наведении */
-}
-
-.size-options {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
-.size-box {
-  padding: 10px 20px;
-  border: 2px solid #333;
-  border-radius: 8px;
-  cursor: pointer;
-  color: #fff;
-  transition: background-color 0.3s ease, transform 0.2s ease;
-}
-
-.size-box.selected {
-  background-color: #5c6bc0; /* Цвет акцента */
-  transform: scale(1.1); /* Увеличение размера при выборе */
-}
-
-.gender-options {
-  display: flex;
-  gap: 10px;
-}
-
-.gender-box {
-  padding: 10px 20px;
-  border: 2px solid #333;
-  border-radius: 8px;
-  cursor: pointer;
-  color: #fff;
-  transition: background-color 0.3s ease, transform 0.2s ease;
-}
-
-.gender-box.selected {
-  background-color: #5c6bc0; /* Цвет акцента для пола */
-  transform: scale(1.1); /* Увеличение размера при выборе */
-}
-
-.apply-filters {
-  margin-top: 20px;
-  text-align: center;
-}
-
-.button {
-  background-color: #f50057; /* Неоновый розовый для кнопки */
-  color: white;
-  padding: 10px 20px;
-  border-radius: 5px;
   border: none;
+  border-radius: 6px;
   cursor: pointer;
-  transition: background-color 0.3s ease, transform 0.2s ease;
+  font-weight: 500;
+  transition: transform 0.3s ease, background-color 0.3s ease;
 }
 
-.button:hover {
-  background-color: #c51162; /* Тёмный оттенок розового при наведении */
-  transform: scale(1.1); /* Увеличение кнопки при наведении */
+button:hover {
+  transform: translateY(-3px);
 }
 
-/* Анимация появления элементов */
+/* Зелёная кнопка для применения */
+.apply-btn {
+  background: #4CAF50; /* Тёмно-зелёный для кнопки "Применить фильтры" */
+  color: white;
+}
+
+/* Красная кнопка для сброса */
+.reset-btn {
+  background: #D32F2F; /* Тёмно-красный для кнопки "Сбросить фильтры" */
+  color: white;
+}
+
+button:focus {
+  outline: none;
+}
+
+/* Анимация появления */
 @keyframes fadeIn {
-  from {
+  0% {
     opacity: 0;
   }
-  to {
+  100% {
     opacity: 1;
   }
 }
 
 @keyframes fadeInUp {
-  from {
+  0% {
     opacity: 0;
     transform: translateY(20px);
   }
-  to {
+  100% {
     opacity: 1;
     transform: translateY(0);
-  }
-}
-
-@keyframes expand {
-  from {
-    opacity: 0;
-    height: 0;
-  }
-  to {
-    opacity: 1;
-    height: auto;
   }
 }
 </style>
