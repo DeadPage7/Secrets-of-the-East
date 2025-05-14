@@ -120,7 +120,7 @@ export default {
 }
 
 .switch-to-login .link {
-  color: #007bff;
+  color: #ff85c1; /* Розовый неоновый цвет */
   cursor: pointer;
 }
 
@@ -130,7 +130,7 @@ export default {
 
 /* Стили для ошибок ввода */
 .error {
-  color: #ff4d4f;
+  color: #ff4d4f; /* Красный цвет для ошибок */
   font-size: 12px;
   margin-top: 5px;
 }
@@ -152,14 +152,15 @@ export default {
 
 /* Стили для модального окна */
 .modal {
-  background: #1e1e2f;
+  background: #1a1a2e; /* Темно-синий цвет фона */
   padding: 40px;
   border-radius: 16px;
   width: 400px;
   max-width: 90%;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
   animation: slideIn 0.4s ease;
   position: relative;
+  border: 2px solid #c84b9e;
+  box-shadow: 0 0 30px rgba(200, 75, 158, 0.6);  position: relative;
 }
 
 /* Кнопка для закрытия окна */
@@ -176,7 +177,7 @@ export default {
 }
 
 .close-btn:hover {
-  color: #ff6464;
+  color: #ff6464; /* Цвет для кнопки закрытия */
 }
 
 /* Заголовок модального окна */
@@ -201,7 +202,7 @@ input, select {
   border-radius: 8px;
   border: none;
   outline: none;
-  background: #2c2c3e;
+  background: #2c2c3e; /* Темный фон для полей ввода */
   color: #fff;
   transition: all 0.3s ease;
 }
@@ -213,14 +214,14 @@ input::placeholder {
 
 /* Стили для фокуса на полях ввода */
 input:focus, select:focus {
-  background: #3c3c50;
-  box-shadow: 0 0 0 2px #5c6bc0;
+  background: #3c3c50; /* Цвет при фокусе */
+  box-shadow: 0 0 0 2px #5c6bc0; /* Светлый фиолетовый */
 }
 
 /* Кнопка отправки формы */
 .submit-btn {
   padding: 12px;
-  background: #5c6bc0;
+  background: #5c6bc0; /* Неоновый фиолетовый цвет */
   color: white;
   font-weight: bold;
   font-size: 18px;
@@ -231,7 +232,7 @@ input:focus, select:focus {
 }
 
 .submit-btn:hover {
-  background: #7986cb;
+  background: #7986cb; /* Светлый фиолетовый для ховера */
 }
 
 /* Анимации */

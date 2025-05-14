@@ -2,7 +2,8 @@
   <header class="header">
     <div class="nav-bar">
       <div class="nav-left">
-        <span class="store-name">Тайны Востока</span>
+        <!-- Кликабельное название магазина -->
+        <a href="#" class="store-name" @click.prevent="goHome">Тайны Востока</a>
       </div>
       <div class="nav-center">
         <a href="#" class="nav-link" @click.prevent="showDeliveryPoints">Пункт выдачи</a>
@@ -29,7 +30,7 @@
     <RegisterModal v-if="showRegister" @close="showRegister = false" @switchToLogin="switchToLogin" />
     <LoginModal v-if="showLogin" @close="showLogin = false" @switchToRegister="switchToRegister" @loginSuccess="showProfileModal" />
     <ProfileModal v-if="showProfile" @close="showProfile = false" @logout="handleLogout" />
-    <PointsModal v-if="showDeliveryModal" @close="showDeliveryModal = false" />
+    <PointsModal v-show="showDeliveryModal" @close="showDeliveryModal = false" />
   </header>
 </template>
 
@@ -52,26 +53,20 @@ export default {
   setup() {
     const router = useRouter();
     const searchQuery = ref('');
-    const showDeliveryModal = ref(false);
 
     const handleSearch = () => {
       if (router.currentRoute.value.path !== '/') {
         router.push('/');
       }
       window.dispatchEvent(new CustomEvent('search-request', {
-        detail: { query: searchQuery.value.trim() }
+        detail: {query: searchQuery.value.trim()}
       }));
-    };
-
-    const showDeliveryPoints = () => {
-      showDeliveryModal.value = true;
     };
 
     return {
       searchQuery,
       handleSearch,
-      showDeliveryModal,
-      showDeliveryPoints,
+      router,
     };
   },
   data() {
@@ -79,9 +74,13 @@ export default {
       showRegister: false,
       showLogin: false,
       showProfile: false,
+      showDeliveryModal: false,
     };
   },
   methods: {
+    goHome() {
+      this.$router.push('/');
+    },
     handleProfileClick() {
       if (this.isAuthenticated()) {
         this.showProfile = true;
@@ -111,11 +110,15 @@ export default {
         this.$forceUpdate();
       });
     },
+    showDeliveryPoints() {
+      this.showDeliveryModal = true;
+    }
   },
 };
 </script>
+
 <style scoped>
-  /* Панель навигации */
+/* Панель навигации */
 .nav-bar {
   display: flex;
   justify-content: center;
@@ -151,6 +154,13 @@ export default {
   color: #ffffff;
   letter-spacing: 1px;
   animation: fadeIn 1s ease-out;
+  text-decoration: none;
+  transition: color 0.3s ease, transform 0.3s ease;
+}
+
+.store-name:hover {
+  color: #ff85c1;
+  transform: scale(1.05);
 }
 
 /* Центровка навигации */
@@ -269,7 +279,4 @@ export default {
     opacity: 1;
   }
 }
-
 </style>
-
-

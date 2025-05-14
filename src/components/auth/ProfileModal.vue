@@ -203,15 +203,16 @@ export default {
 }
 
 .modal-content {
-  background: #2a2a2a;
+  background: #0f0f1f;
   padding: 30px;
   border-radius: 16px;
   width: 100%;
   max-width: 450px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-  position: relative;
+  border: 2px solid #c84b9e;
+  box-shadow: 0 0 30px rgba(200, 75, 158, 0.6);  position: relative;
   animation: slideUp 0.3s ease;
   color: #fff;
+
 }
 
 .close-btn {
@@ -233,14 +234,14 @@ export default {
 }
 
 .close-btn:hover {
-  color: #fff;
+  color: #ff85c1;
   background: rgba(255, 255, 255, 0.1);
 }
 
 h2 {
   text-align: center;
   margin-bottom: 20px;
-  color: #fff;
+  color: #ff85c1;
   font-size: 24px;
 }
 
@@ -349,8 +350,8 @@ label {
 
 .form-input:focus {
   outline: none;
-  border-color: #5c6bc0;
-  box-shadow: 0 0 0 2px rgba(92, 107, 192, 0.3);
+  border-color: #ff85c1;
+  box-shadow: 0 0 0 2px rgba(255, 133, 193, 0.3);
 }
 
 .form-actions {

@@ -72,21 +72,6 @@ export default {
 </script>
 
 <style scoped>
-/* Стили для ссылки перехода на регистрацию */
-.switch-to-register {
-  margin-top: 15px;
-  text-align: center;
-}
-
-.switch-to-register .link {
-  color: #007bff;
-  cursor: pointer;
-}
-
-.switch-to-register .link:hover {
-  text-decoration: underline;
-}
-
 /* Стили для фона модального окна */
 .modal-overlay {
   position: fixed;
@@ -104,12 +89,13 @@ export default {
 
 /* Стили для самого модального окна */
 .modal {
-  background: #1e1e2f;
+  background: #1a1a2e; /* Темный фон */
   padding: 40px;
   border-radius: 16px;
   width: 400px;
   max-width: 90%;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  border: 2px solid #c84b9e;
+  box-shadow: 0 0 30px rgba(200, 75, 158, 0.6);  position: relative;
   animation: slideIn 0.4s ease;
   position: relative;
 }
@@ -120,7 +106,7 @@ export default {
   top: 10px;
   right: 10px;
   background: transparent;
-  color: white;
+  color: #fff;
   font-size: 24px;
   border: none;
   cursor: pointer;
@@ -128,7 +114,7 @@ export default {
 }
 
 .close-btn:hover {
-  color: #ff6464;
+  color: #ff6464; /* Розовый неоновый при наведении */
 }
 
 /* Заголовок модального окна */
@@ -153,25 +139,25 @@ input {
   border-radius: 8px;
   border: none;
   outline: none;
-  background: #2c2c3e;
+  background: #2c2c44; /* Темный фон для полей ввода */
   color: #fff;
   transition: all 0.3s ease;
 }
 
 input::placeholder {
-  color: #bbb;
+  color: #bbb; /* Серый цвет для placeholder */
 }
 
 /* Стили при фокусе на поле ввода */
 input:focus {
-  background: #3c3c50;
-  box-shadow: 0 0 0 2px #5c6bc0;
+  background: #3c3c50; /* Более светлый темный фон при фокусе */
+  box-shadow: 0 0 0 2px #5c6bc0; /* Синий неоновый цвет для фокуса */
 }
 
 /* Кнопка для отправки формы */
 .submit-btn {
   padding: 12px;
-  background: #5c6bc0;
+  background: #5c6bc0; /* Синий неоновый фон */
   color: white;
   font-weight: bold;
   font-size: 18px;
@@ -182,7 +168,7 @@ input:focus {
 }
 
 .submit-btn:hover {
-  background: #7986cb;
+  background: #7986cb; /* Светлый синий при наведении */
 }
 
 /* Анимация появления модального окна */
@@ -205,5 +191,20 @@ input:focus {
     transform: translateY(0);
     opacity: 1;
   }
+}
+
+/* Стили для ссылки перехода на регистрацию */
+.switch-to-register {
+  margin-top: 15px;
+  text-align: center;
+}
+
+.switch-to-register .link {
+  color: #ff85c1; /* Розовый неоновый для ссылки */
+  cursor: pointer;
+}
+
+.switch-to-register .link:hover {
+  text-decoration: underline;
 }
 </style>
