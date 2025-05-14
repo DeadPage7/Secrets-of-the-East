@@ -2,33 +2,34 @@
   <header class="header">
     <div class="nav-bar">
       <div class="nav-left">
-        <!-- Название магазина -->
         <span class="store-name">Тайны Востока</span>
       </div>
       <div class="nav-center">
-        <!-- Ссылки для навигации -->
-        <a href="#" class="nav-link">Пункт выдачи</a>
+        <a href="#" class="nav-link" @click.prevent="showDeliveryPoints">Пункт выдачи</a>
         <a href="#" class="nav-link">Корзина</a>
-        <!-- Ссылка для открытия модального окна профиля -->
         <a href="#" class="nav-link" @click.prevent="handleProfileClick">Профиль</a>
       </div>
       <div class="nav-right">
         <div class="search-container">
-          <!-- Поле для поиска -->
-          <input type="text" class="search-input" placeholder="Поиск..." />
+          <input
+            type="text"
+            class="search-input"
+            placeholder="Поиск..."
+            v-model="searchQuery"
+            @keyup.enter="handleSearch"
+          />
         </div>
-
-        <!-- Кнопка выхода, которая скрывается после выхода -->
         <button v-if="isAuthenticated()" class="logout-button" @click="handleLogout">
           Выйти
         </button>
       </div>
     </div>
 
-    <!-- Модальные окна для регистрации, авторизации и профиля -->
+    <!-- Модальные окна -->
     <RegisterModal v-if="showRegister" @close="showRegister = false" @switchToLogin="switchToLogin" />
     <LoginModal v-if="showLogin" @close="showLogin = false" @switchToRegister="switchToRegister" @loginSuccess="showProfileModal" />
     <ProfileModal v-if="showProfile" @close="showProfile = false" @logout="handleLogout" />
+    <PointsModal v-if="showDeliveryModal" @close="showDeliveryModal = false" />
   </header>
 </template>
 
@@ -36,6 +37,9 @@
 import RegisterModal from "../auth/RegisterModal.vue";
 import LoginModal from "../auth/LoginModal.vue";
 import ProfileModal from "../auth/ProfileModal.vue";
+import PointsModal from "../Points/PointsModal.vue";
+import { useRouter } from "vue-router";
+import { ref } from "vue";
 
 export default {
   name: "MainHeader",
@@ -43,59 +47,73 @@ export default {
     RegisterModal,
     LoginModal,
     ProfileModal,
+    PointsModal,
+  },
+  setup() {
+    const router = useRouter();
+    const searchQuery = ref('');
+    const showDeliveryModal = ref(false);
+
+    const handleSearch = () => {
+      if (router.currentRoute.value.path !== '/') {
+        router.push('/');
+      }
+      window.dispatchEvent(new CustomEvent('search-request', {
+        detail: { query: searchQuery.value.trim() }
+      }));
+    };
+
+    const showDeliveryPoints = () => {
+      showDeliveryModal.value = true;
+    };
+
+    return {
+      searchQuery,
+      handleSearch,
+      showDeliveryModal,
+      showDeliveryPoints,
+    };
   },
   data() {
     return {
-      showRegister: false, // Состояние для модального окна регистрации
-      showLogin: false, // Состояние для модального окна входа
-      showProfile: false, // Состояние для модального окна профиля
+      showRegister: false,
+      showLogin: false,
+      showProfile: false,
     };
   },
   methods: {
-    // Обработчик клика по ссылке "Профиль"
     handleProfileClick() {
       if (this.isAuthenticated()) {
-        // Если пользователь авторизован, показываем профиль
         this.showProfile = true;
       } else {
-        // Если пользователь не авторизован, показываем окно входа
         this.showLogin = true;
       }
     },
-    // Проверка на аутентификацию (наличие токена в localStorage)
     isAuthenticated() {
       return localStorage.getItem("auth_token") !== null;
     },
-    // Переключение на форму входа из формы регистрации
     switchToLogin() {
       this.showRegister = false;
       this.showLogin = true;
     },
-    // Переключение на форму регистрации из формы входа
     switchToRegister() {
       this.showLogin = false;
       this.showRegister = true;
     },
-    // Отображение модального окна профиля после успешного входа
     showProfileModal() {
       this.showLogin = false;
       this.showProfile = true;
     },
-    // Обработчик выхода из аккаунта
     handleLogout() {
-      // Удаляем токен из localStorage
       localStorage.removeItem("auth_token");
-      this.showProfile = false; // Закрываем модальное окно профиля
-
-      // Скрыть кнопку "Выйти" сразу после выхода
+      this.showProfile = false;
       this.$nextTick(() => {
-        this.$forceUpdate(); // Принудительно перерисовываем компонент, чтобы скрыть кнопку
+        this.$forceUpdate();
       });
     },
   },
 };
 </script>
-
 <style scoped>
   /* Панель навигации */
 .nav-bar {
@@ -251,6 +269,7 @@ export default {
     opacity: 1;
   }
 }
+
 </style>
 
 

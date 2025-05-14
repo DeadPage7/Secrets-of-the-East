@@ -6,21 +6,31 @@
 
     <!-- Правая часть — карточки товаров -->
     <div class="products-section">
-      <ProductCards :filters="activeFilters" />
+      <ProductCards
+        :filters="activeFilters"
+        :search-query="searchQuery"
+      />
     </div>
   </div>
 </template>
 
 <script setup>
-import {ref} from 'vue'
+import {onMounted, ref} from 'vue'
 import ProductFilter from '@/components/Product/ProductFilter.vue'
 import ProductCards from '@/components/Product/ProductCards.vue'
 import HeaderInfo from "@/components/Headers/HeaderInfo.vue";
 const activeFilters = ref({});
+const searchQuery = ref('');
 
 const handleFilterChange = (filters) => {
   activeFilters.value = filters;
 };
+
+onMounted(() => {
+  window.addEventListener('search-request', (event) => {
+    searchQuery.value = event.detail.query;
+  });
+});
 </script>
 
 

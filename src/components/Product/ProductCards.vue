@@ -85,6 +85,10 @@ const props = defineProps({
   filters: {
     type: Object,
     default: () => ({})
+  },
+  searchQuery: {
+    type: String,
+    default: ''
   }
 });
 
@@ -97,22 +101,33 @@ const itemsPerPage = 12;
 const fetchProducts = async () => {
   loading.value = true;
   try {
-    const params = {
-      ...props.filters,
-      page: currentPage.value,
-      per_page: itemsPerPage
-    };
+    let response;
 
-    // Удаляем пустые параметры
-    Object.keys(params).forEach(key => {
-      if (params[key] === null || params[key] === undefined || params[key] === '') {
-        delete params[key];
-      }
-    });
+    if (props.searchQuery) {
+      // Если есть поисковый запрос, используем поисковый эндпоинт
+      response = await api.get('/products/search', {
+        params: { q: props.searchQuery }
+      });
+      products.value = response.data.data || response.data;
+      totalProducts.value = response.data.count || products.value.length;
+    } else {
+      // Иначе используем обычную фильтрацию
+      const params = {
+        ...props.filters,
+        page: currentPage.value,
+        per_page: itemsPerPage
+      };
 
-    const response = await api.get('/products/filter', { params });
-    products.value = response.data.data || response.data;
-    totalProducts.value = response.data.count || products.value.length;
+      Object.keys(params).forEach(key => {
+        if (params[key] === null || params[key] === undefined || params[key] === '') {
+          delete params[key];
+        }
+      });
+
+      response = await api.get('/products/filter', { params });
+      products.value = response.data.data || response.data;
+      totalProducts.value = response.data.count || products.value.length;
+    }
   } catch (error) {
     console.error('Ошибка при загрузке товаров:', error);
     products.value = [];
@@ -195,7 +210,19 @@ watch(() => props.filters, () => {
 onMounted(() => {
   fetchProducts();
 });
+watch(() => props.filters, () => {
+  currentPage.value = 1;
+  fetchProducts();
+}, { deep: true });
 
+watch(() => props.searchQuery, () => {
+  currentPage.value = 1;
+  fetchProducts();
+});
+
+onMounted(() => {
+  fetchProducts();
+});
 </script>
 
 <style scoped>

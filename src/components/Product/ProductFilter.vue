@@ -28,7 +28,7 @@
     <div class="filter-section" :class="sectionClass">
       <h3>Пол</h3>
       <select v-model="selectedGender" class="filter-select">
-        <option value="">Все полы</option>
+        <option value="">Не важно</option>
         <option value="0">Мужской</option>
         <option value="1">Женский</option>
       </select>
