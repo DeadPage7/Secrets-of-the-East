@@ -2,7 +2,6 @@
   <header class="header">
     <div class="nav-bar">
       <div class="nav-left">
-        <!-- Кликабельное название магазина -->
         <a href="#" class="store-name" @click.prevent="goHome">Тайны Востока</a>
       </div>
       <div class="nav-center">
@@ -20,13 +19,12 @@
             @keyup.enter="handleSearch"
           />
         </div>
-        <button v-if="isAuthenticated()" class="logout-button" @click="handleLogout">
+        <button v-if="isAuthenticated" class="logout-button" @click="handleLogout">
           Выйти
         </button>
       </div>
     </div>
 
-    <!-- Модальные окна -->
     <RegisterModal v-if="showRegister" @close="showRegister = false" @switchToLogin="switchToLogin" />
     <LoginModal v-if="showLogin" @close="showLogin = false" @switchToRegister="switchToRegister" @loginSuccess="showProfileModal" />
     <ProfileModal v-if="showProfile" @close="showProfile = false" @logout="handleLogout" />
@@ -40,7 +38,8 @@ import LoginModal from "../auth/LoginModal.vue";
 import ProfileModal from "../auth/ProfileModal.vue";
 import PointsModal from "../Points/PointsModal.vue";
 import { useRouter } from "vue-router";
-import { ref } from "vue";
+import { ref, computed } from "vue";
+import { useStore } from "vuex";
 
 export default {
   name: "MainHeader",
@@ -52,6 +51,7 @@ export default {
   },
   setup() {
     const router = useRouter();
+    const store = useStore();
     const searchQuery = ref('');
 
     const handleSearch = () => {
@@ -59,14 +59,18 @@ export default {
         router.push('/');
       }
       window.dispatchEvent(new CustomEvent('search-request', {
-        detail: {query: searchQuery.value.trim()}
+        detail: { query: searchQuery.value.trim() }
       }));
     };
+
+    const isAuthenticated = computed(() => store.getters.isLoggedIn);
 
     return {
       searchQuery,
       handleSearch,
       router,
+      isAuthenticated,
+      store,
     };
   },
   data() {
@@ -82,14 +86,11 @@ export default {
       this.$router.push('/');
     },
     handleProfileClick() {
-      if (this.isAuthenticated()) {
+      if (this.isAuthenticated) {
         this.showProfile = true;
       } else {
         this.showLogin = true;
       }
-    },
-    isAuthenticated() {
-      return localStorage.getItem("auth_token") !== null;
     },
     switchToLogin() {
       this.showRegister = false;
@@ -104,11 +105,8 @@ export default {
       this.showProfile = true;
     },
     handleLogout() {
-      localStorage.removeItem("auth_token");
+      this.store.dispatch('logout');
       this.showProfile = false;
-      this.$nextTick(() => {
-        this.$forceUpdate();
-      });
     },
     showDeliveryPoints() {
       this.showDeliveryModal = true;

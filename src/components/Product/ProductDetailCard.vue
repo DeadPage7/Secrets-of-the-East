@@ -26,26 +26,28 @@
             <!-- Цена -->
             <p><strong>Цена:</strong> {{ formatPrice(product.price) }}</p>
 
-            <!-- Цвета и размеры -->
+            <!-- Цвета и размеры отдельно -->
             <div v-if="product.product_color_sizes?.length">
-              <h3>Доступные цвета и размеры:</h3>
-              <div class="color-sizes">
-                <div v-for="(pcs, index) in product.product_color_sizes" :key="index" class="color-size-item">
-                  <!-- Цвет -->
-                  <div
-                    v-if="pcs.color"
-                    class="color-box"
-                    :style="{ backgroundColor: pcs.color.hex }"
-                    :title="pcs.color.name"
-                  ></div>
-                  <!-- Размер -->
-                  <div
-                    v-if="pcs.size"
-                    class="size-box"
-                    :title="'Размер: ' + pcs.size.name"
-                  >
-                    {{ pcs.size.name }}
-                  </div>
+              <h3>Доступные цвета:</h3>
+              <div class="color-options">
+                <div
+                  v-for="(color, index) in uniqueColors"
+                  :key="index"
+                  class="color-box"
+                  :style="{ backgroundColor: color.hex }"
+                  :title="color.name"
+                ></div>
+              </div>
+
+              <h3 style="margin-top: 20px;">Доступные размеры:</h3>
+              <div class="size-options">
+                <div
+                  v-for="(size, index) in uniqueSizes"
+                  :key="index"
+                  class="size-box"
+                  :title="'Размер: ' + size.name"
+                >
+                  {{ size.name }}
                 </div>
               </div>
             </div>
@@ -80,7 +82,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import { useRoute } from 'vue-router';
 import api from '@/services/api';
 
@@ -90,17 +92,33 @@ const loading = ref(true);
 const productId = route.params.id;
 const quantity = ref(1);
 
-// Запрос на получение товара с категорией и страной
+// Загрузка данных о товаре
 const fetchProduct = async () => {
   try {
     const response = await api.get(`/product/${productId}`);
-    product.value = response.data; // Присваиваем полученные данные
+    product.value = response.data;
   } catch (error) {
     console.error('Ошибка при загрузке данных о товаре:', error);
   } finally {
     loading.value = false;
   }
 };
+
+// Выделяем уникальные цвета
+const uniqueColors = computed(() => {
+  const seen = new Set();
+  return (product.value?.product_color_sizes || [])
+    .map(pcs => pcs.color)
+    .filter(color => color && !seen.has(color.id) && seen.add(color.id));
+});
+
+// Выделяем уникальные размеры
+const uniqueSizes = computed(() => {
+  const seen = new Set();
+  return (product.value?.product_color_sizes || [])
+    .map(pcs => pcs.size)
+    .filter(size => size && !seen.has(size.id) && seen.add(size.id));
+});
 
 // Форматирование цены
 const formatPrice = (price) => {
@@ -113,39 +131,30 @@ const formatPrice = (price) => {
 
 // Форматирование пола
 const formatSex = (sex) => {
-  if (sex === 0) {
-    return 'Женский';
-  } else if (sex === 1) {
-    return 'Мужской';
-  }
-  return 'Не указан'; // Если значение пола не 0 и не 1
+  if (sex === 0) return 'Женский';
+  if (sex === 1) return 'Мужской';
+  return 'Не указан';
 };
 
-// Получаем URL изображения
+// Получение URL изображения
 const getImageUrl = (path) => {
   if (!path) return '/placeholder-product.jpg';
-  if (path.startsWith('http')) return path;
-  return `http://secrets-of-the-east.ru/storage/${path}`;
+  return path.startsWith('http') ? path : `http://secrets-of-the-east.ru/storage/${path}`;
 };
 
-// Уменьшение количества
+// Управление количеством
 const decreaseQuantity = () => {
-  if (quantity.value > 1) {
-    quantity.value--;
-  }
+  if (quantity.value > 1) quantity.value--;
 };
-
-// Увеличение количества
 const increaseQuantity = () => {
   quantity.value++;
 };
 
-// Добавление товара в корзину (пока не реализовано)
+// Добавление в корзину
 const addToCart = () => {
-  console.log(`Товар добавлен в корзину, количество: ${quantity.value}`);
+  console.log(`Добавлено в корзину: ${quantity.value}`);
 };
 
-// Загрузка данных при монтировании компонента
 onMounted(fetchProduct);
 </script>
 
@@ -153,7 +162,13 @@ onMounted(fetchProduct);
 body {
   background-color: #0f0f1f;
 }
-
+.color-options,
+.size-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 10px;
+}
 .product-detail {
   display: flex;
   justify-content: space-between;

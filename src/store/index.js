@@ -1,20 +1,35 @@
 import { createStore } from 'vuex';
+import api from "@/services/api";
 
 export default createStore({
   state: {
-    isLoading: false, // Состояние для загрузки
+    isLoading: false,
     user: {
-      loggedIn: false, // Статус авторизации
-      name: '',         // Имя пользователя
-      email: '',        // Email пользователя
+      loggedIn: !!localStorage.getItem('auth_token'),
+      name: localStorage.getItem('userName') || '',
+      email: localStorage.getItem('userEmail') || '',
     },
   },
   mutations: {
     setLoading(state, value) {
-      state.isLoading = value; // Изменяет состояние загрузки
+      state.isLoading = value;
     },
     setUser(state, user) {
-      state.user = user; // Обновляет данные пользователя
+      console.log('Setting user:', user);
+      state.user = {
+        loggedIn: true,
+        name: user.name,
+        email: user.email,
+      };
+      localStorage.setItem('auth_token', user.token);
+      localStorage.setItem('userName', user.name);
+      localStorage.setItem('userEmail', user.email);
+    },
+    logout(state) {
+      state.user = { loggedIn: false, name: '', email: '' };
+      localStorage.removeItem('auth_token');
+      localStorage.removeItem('userName');
+      localStorage.removeItem('userEmail');
     },
   },
   actions: {
@@ -24,26 +39,41 @@ export default createStore({
     stopLoading({ commit }) {
       commit('setLoading', false);
     },
-    // Действие для загрузки данных пользователя
-    setUser({ commit }, user) {
-      commit('setUser', user);
+    async login({ commit }, userCredentials) {
+      try {
+        const response = await api.post('/login', userCredentials);
+        console.log('Login response:', response.data);
+
+        if (!response.data || !response.data.token) {
+          throw new Error('Неверная структура ответа сервера');
+        }
+
+        // Можем временно использовать email как имя
+        commit('setUser', {
+          token: response.data.token,
+          name: userCredentials.email, // временно
+          email: userCredentials.email
+        });
+
+      } catch (error) {
+        console.error('Ошибка авторизации:', error);
+        throw error; // пробросим, чтобы в компоненте поймать
+      }
     },
-    // Действие для авторизации пользователя
-    login({ commit }, userCredentials) {
-      // Здесь может быть логика для авторизации через API
-      // Пример:
-      // const response = await api.login(userCredentials);
-      // commit('setUser', response.data);
-      commit('setUser', { loggedIn: true, name: userCredentials.name, email: userCredentials.email });
-    },
-    // Действие для выхода
-    logout({ commit }) {
-      commit('setUser', { loggedIn: false, name: '', email: '' });
+    async logout({ commit }) {
+      try {
+        await api.post('/logout'); // Уведомляем сервер
+        console.log('Сервер успешно завершил сессию');
+      } catch (error) {
+        console.warn('Ошибка при выходе с сервера (возможно, токен уже недействителен):', error);
+      } finally {
+        commit('logout'); // Локально выходим в любом случае
+      }
     },
   },
   getters: {
     isLoading: (state) => state.isLoading,
-    isLoggedIn: (state) => state.user.loggedIn, // Геттер для авторизации
-    userName: (state) => state.user.name,       // Геттер для имени пользователя
+    isLoggedIn: (state) => state.user.loggedIn,
+    userName: (state) => state.user.name,
   },
 });

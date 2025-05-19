@@ -35,39 +35,22 @@ export default {
     };
   },
   methods: {
-    // Метод для авторизации
     async login() {
       try {
-        const response = await api.post("/login", {
+        // Вызываем экшен login из Vuex
+        await this.$store.dispatch("login", {
           email: this.email,
           password: this.password,
         });
 
-        if (response.status === 200) {
-          // Сохраняем токен в localStorage при успешной авторизации
-          localStorage.setItem('auth_token', response.data.token);
-          alert("Вы успешно авторизованы!");
-          this.$emit("close"); // Закрыть окно
-          this.$router.push({ name: "home" }); // Перенаправить на главную страницу
-        }
+        // После успешного входа — закрываем модалку
+        this.$emit("close");
       } catch (error) {
-        if (error.response) {
-          alert(error.response.data.message || "Ошибка авторизации");
-        } else {
-          alert("Что-то пошло не так");
-        }
+        console.error("Ошибка входа:", error);
+        // Тут можно показать сообщение об ошибке (например, через alert или переменную ошибки)
       }
     },
-    // Метод для перехода на страницу регистрации
-    switchToRegister() {
-      this.$emit("switchToRegister"); // Сообщаем родительскому компоненту, что нужно перейти к регистрации
-      this.$emit("close"); // Закрываем окно авторизации
-    },
-    // Метод для закрытия окна
-    close() {
-      this.$emit("close");
-    },
-  },
+  }
 };
 </script>
 

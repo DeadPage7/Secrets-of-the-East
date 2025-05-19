@@ -1,6 +1,6 @@
 <template>
   <div class="product-reviews">
-    <!-- Отображаем отзывы -->
+    <!-- Отзывы -->
     <div v-if="reviews.length">
       <h3 class="reviews-title">Отзывы</h3>
       <div class="reviews-container">
@@ -21,36 +21,50 @@
       </div>
     </div>
 
-    <!-- Сообщение, если отзывов нет -->
     <div v-else>
       <p>Нет отзывов для этого товара.</p>
     </div>
 
-    <!-- Форма для добавления отзыва -->
+    <!-- Форма отзыва -->
     <div v-if="isLoggedIn" class="review-form">
       <h3>Оставьте свой отзыв</h3>
       <form @submit.prevent="submitReview">
-        <div>
-          <label for="rating">Оценка:</label>
-          <select v-model="newReview.rating" id="rating" required>
-            <option v-for="rating in ratings" :key="rating" :value="rating">{{ rating }}</option>
-          </select>
+        <div class="form-group rating-group">
+          <label>Оценка:</label>
+          <div class="rating-stars">
+            <span
+              v-for="star in 5"
+              :key="star"
+              class="star"
+              :class="{ selected: star <= newReview.rating }"
+              @click="newReview.rating = star"
+              role="button"
+              tabindex="0"
+              @keydown.enter.prevent="newReview.rating = star"
+              aria-label="Оценить {{ star }} звёзд"
+            >★</span>
+          </div>
         </div>
-        <div>
+        <div class="form-group">
           <label for="description">Комментарий:</label>
-          <textarea v-model="newReview.description" id="description" required></textarea>
+          <textarea
+            v-model="newReview.description"
+            id="description"
+            rows="4"
+            placeholder="Напишите ваш отзыв здесь..."
+            required
+          ></textarea>
         </div>
+
+        <!-- Ошибка отображения -->
+        <p v-if="errorMessage" class="error-message">{{ errorMessage }}</p>
+
         <button type="submit">Отправить отзыв</button>
       </form>
     </div>
 
-    <!-- Если пользователь не авторизован -->
     <div v-else>
-      <p>
-        Для оставления отзыва необходимо авторизоваться.
-        <router-link to="/login">Войти</router-link> или
-        <router-link to="/register">зарегистрироваться</router-link>.
-      </p>
+      <p>Чтобы оставить отзыв, необходимо нажать на профиль и авторизоваться.</p>
     </div>
   </div>
 </template>
@@ -61,15 +75,20 @@ import { useStore } from 'vuex';
 import { useRoute } from 'vue-router';
 import api from '@/services/api';
 
+// Получаем store и параметры роутера
 const store = useStore();
 const route = useRoute();
 const productId = route.params.id;
+
+// Данные отзывов и новой формы
 const reviews = ref([]);
-const newReview = ref({ rating: 1, description: '' });
+const newReview = ref({ rating: 0, description: '' });
+const errorMessage = ref(''); // Для отображения ошибок пользователю
 
+// Проверка авторизации
 const isLoggedIn = computed(() => store.state.user.loggedIn);
-const ratings = [1, 2, 3, 4, 5];
 
+// Функция загрузки отзывов с сервера
 const fetchReviews = async () => {
   try {
     const response = await api.get(`/product/${productId}/review`);
@@ -79,18 +98,36 @@ const fetchReviews = async () => {
   }
 };
 
+// Отправка нового отзыва
 const submitReview = async () => {
-  if (!newReview.value.rating || !newReview.value.description) return;
+  errorMessage.value = ''; // Сбрасываем ошибку
+
+  if (!newReview.value.rating || !newReview.value.description.trim()) {
+    errorMessage.value = 'Пожалуйста, заполните оценку и комментарий.';
+    return;
+  }
 
   try {
     const response = await api.post(`/product/${productId}/review`, newReview.value);
-    reviews.value.push(response.data);
-    newReview.value = { rating: 1, description: '' };
+    reviews.value.push(response.data); // Добавляем новый отзыв в список
+    newReview.value = { rating: 0, description: '' }; // Очищаем форму
   } catch (error) {
-    console.error('Ошибка при добавлении отзыва:', error);
+    if (error.response && error.response.data && error.response.data.message) {
+      errorMessage.value = error.response.data.message;
+    } else if (error.response && error.response.data && typeof error.response.data === 'object') {
+      // Если Laravel вернул объект с validation errors
+      const messages = [];
+      for (const key in error.response.data.errors) {
+        messages.push(...error.response.data.errors[key]);
+      }
+      errorMessage.value = messages.join(' ');
+    } else {
+      errorMessage.value = 'Произошла ошибка при отправке отзыва.';
+    }
   }
 };
 
+// Загружаем отзывы при загрузке компонента
 onMounted(fetchReviews);
 </script>
 
@@ -162,25 +199,36 @@ onMounted(fetchReviews);
   color: #444;
   margin-right: 2px;
   transition: color 0.3s ease;
+  cursor: default;
 }
 
 .star.filled {
-  color: #ffc107;
-  text-shadow: 0 0 4px #ffc10790;
+  color: #ff85c1; /* Цвет под вашу палитру */
+  text-shadow: 0 0 6px #ff85c180;
 }
 
-.review-text {
-  font-size: 14px;
-  color: #ddd;
-}
-
+/* Форма для отзыва */
 .review-form {
   background: linear-gradient(to bottom right, #1a1a2f, #2a2a3f);
-  padding: 30px;
+  padding: 30px 35px;
   border-radius: 14px;
   margin-top: 50px;
   box-shadow: 0 0 20px #c84b9e50, 0 0 10px #ff85c140;
   backdrop-filter: blur(6px);
+  max-width: 500px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.review-form h3 {
+  text-align: center;
+  margin-bottom: 25px;
+  color: #ff85c1;
+  text-shadow: 0 0 10px #ff85c180;
+}
+
+.form-group {
+  margin-bottom: 20px;
 }
 
 .review-form label {
@@ -191,40 +239,76 @@ onMounted(fetchReviews);
   text-shadow: 0 0 4px #ff85c170;
 }
 
+/* Звёзды выбора рейтинга */
+.rating-group .rating-stars {
+  user-select: none;
+}
+
+.rating-stars .star {
+  font-size: 30px;
+  color: #444;
+  margin-right: 6px;
+  cursor: pointer;
+  transition: color 0.3s ease;
+  text-shadow: none;
+}
+
+.rating-stars .star.selected {
+  color: #ff85c1;
+  text-shadow: 0 0 6px #ff85c180;
+}
+
 .review-form select,
 .review-form textarea {
   width: 100%;
   padding: 12px;
-  margin-bottom: 18px;
   background-color: #2a2a3f;
   border: 1px solid #555;
   color: #f0f0f0;
-  border-radius: 8px;
-  box-shadow: inset 0 0 5px #00000060;
+  border-radius: 10px;
+  box-shadow: inset 0 0 6px #00000080;
+  font-size: 16px;
+  resize: vertical;
+  transition: border-color 0.3s ease;
+}
+
+.review-form select:focus,
+.review-form textarea:focus {
+  border-color: #ff85c1;
+  outline: none;
+  box-shadow: 0 0 8px #ff85c1a0 inset;
+}
+
+.review-form textarea::placeholder {
+  color: #888;
+  font-style: italic;
 }
 
 .review-form button {
-  padding: 12px 24px;
+  width: 100%;
+  padding: 14px 0;
   background-color: #ff85c1;
   border: none;
   color: #0f0f1f;
-  font-size: 16px;
+  font-size: 18px;
   cursor: pointer;
-  border-radius: 10px;
-  transition: all 0.3s ease;
-  box-shadow: 0 0 10px #ff85c180;
+  border-radius: 12px;
+  font-weight: 700;
+  box-shadow: 0 0 15px #ff85c180;
+  transition: background-color 0.3s ease, box-shadow 0.3s ease;
 }
 
 .review-form button:hover {
   background-color: #c84b9e;
-  transform: scale(1.06);
-  box-shadow: 0 0 15px #c84b9e90, 0 0 5px #ff85c160;
+  box-shadow: 0 0 20px #c84b9ecc;
 }
 
-.product-reviews p {
-  color: #c2c2da;
+/* Ошибка */
+.error-message {
+  color: #ff6f91;
+  font-weight: 600;
+  margin-bottom: 15px;
   text-align: center;
-  margin-top: 20px;
+  text-shadow: 0 0 6px #ff6f9160;
 }
-
 </style>

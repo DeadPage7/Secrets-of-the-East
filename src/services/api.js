@@ -1,14 +1,22 @@
-
+// services/api.js
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: 'http://secrets-of-the-east.ru/api',  // базовый URL для запросов
+  baseURL: 'http://secrets-of-the-east.ru/api',
   headers: {
     'Content-Type': 'application/json',
-    // 'Authorization': 'Bearer ТВОЙ_ТОКЕН' (если авторизация требуется)
-  }
+  },
 });
-api.defaults.headers.common['Authorization'] = `Bearer ${localStorage.getItem('auth_token')}`;
+
+// Interceptor: добавляет токен к каждому запросу
+api.interceptors.request.use(config => {
+  const token = localStorage.getItem('auth_token');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+}, error => {
+  return Promise.reject(error);
+});
 
 export default api;
-
