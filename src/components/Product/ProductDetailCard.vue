@@ -16,43 +16,44 @@
             <h1>{{ product.name }}</h1>
             <p class="description">{{ product.description }}</p>
 
-            <!-- Категория и страна -->
             <p><strong>Категория:</strong> {{ product.category?.name || 'Неизвестная категория' }}</p>
             <p><strong>Страна:</strong> {{ product.country?.name || 'Неизвестная страна' }}</p>
-
-            <!-- Пол -->
             <p><strong>Пол:</strong> {{ formatSex(product.sex) }}</p>
-
-            <!-- Цена -->
             <p><strong>Цена:</strong> {{ formatPrice(product.price) }}</p>
 
-            <!-- Цвета и размеры отдельно -->
-            <div v-if="product.product_color_sizes?.length">
+            <!-- Выбор цвета -->
+            <div v-if="uniqueColors.length">
               <h3>Доступные цвета:</h3>
               <div class="color-options">
                 <div
-                  v-for="(color, index) in uniqueColors"
-                  :key="index"
+                  v-for="color in uniqueColors"
+                  :key="color.id"
                   class="color-box"
-                  :style="{ backgroundColor: color.hex }"
+                  :style="{ backgroundColor: color.hex, border: selectedColor?.id === color.id ? '3px solid #ff46a0' : '2px solid #2e2e3f' }"
                   :title="color.name"
+                  @click="selectColor(color)"
                 ></div>
               </div>
+            </div>
 
+            <!-- Выбор размера -->
+            <div v-if="availableSizes.length">
               <h3 style="margin-top: 20px;">Доступные размеры:</h3>
               <div class="size-options">
                 <div
-                  v-for="(size, index) in uniqueSizes"
-                  :key="index"
+                  v-for="size in availableSizes"
+                  :key="size.id"
                   class="size-box"
+                  :class="{ selected: selectedSize?.id === size.id }"
                   :title="'Размер: ' + size.name"
+                  @click="selectSize(size)"
                 >
                   {{ size.name }}
                 </div>
               </div>
             </div>
 
-            <!-- Счетчик количества и кнопка добавления в корзину -->
+            <!-- Количество и кнопка добавления -->
             <div class="add-to-cart-block">
               <div class="quantity-block">
                 <label for="quantity">Количество:</label>
@@ -69,12 +70,23 @@
                   <button class="quantity-btn" @click="increaseQuantity">+</button>
                 </div>
               </div>
-              <button class="btn-add-to-cart" @click="addToCart">Добавить в корзину</button>
+
+              <button
+                class="btn-add-to-cart"
+                :disabled="!canAddToCart"
+                @click="addToCart"
+                title="Выберите цвет и размер"
+              >
+                Добавить в корзину
+              </button>
             </div>
+
+            <!-- Ошибка выбора -->
+            <p v-if="error" class="error-message">{{ error }}</p>
+            <p v-if="successMessage" class="success-message">{{ successMessage }}</p>
           </div>
         </div>
 
-        <!-- Ошибка при загрузке товара -->
         <div v-else class="error">Ошибка загрузки товара</div>
       </template>
     </transition>
@@ -91,20 +103,26 @@ const product = ref(null);
 const loading = ref(true);
 const productId = route.params.id;
 const quantity = ref(1);
+const error = ref('');
+const successMessage = ref('');
 
-// Загрузка данных о товаре
+// Выбранные цвет и размер
+const selectedColor = ref(null);
+const selectedSize = ref(null);
+
+// Загрузка товара с сервера
 const fetchProduct = async () => {
   try {
     const response = await api.get(`/product/${productId}`);
     product.value = response.data;
-  } catch (error) {
-    console.error('Ошибка при загрузке данных о товаре:', error);
+  } catch (e) {
+    console.error('Ошибка при загрузке данных о товаре:', e);
   } finally {
     loading.value = false;
   }
 };
 
-// Выделяем уникальные цвета
+// Уникальные цвета товара
 const uniqueColors = computed(() => {
   const seen = new Set();
   return (product.value?.product_color_sizes || [])
@@ -112,12 +130,20 @@ const uniqueColors = computed(() => {
     .filter(color => color && !seen.has(color.id) && seen.add(color.id));
 });
 
-// Выделяем уникальные размеры
-const uniqueSizes = computed(() => {
+// Доступные размеры для выбранного цвета
+const availableSizes = computed(() => {
+  if (!selectedColor.value) return [];
+  const sizes = product.value.product_color_sizes
+    .filter(pcs => pcs.color.id === selectedColor.value.id)
+    .map(pcs => pcs.size);
+  // Уникальные размеры
   const seen = new Set();
-  return (product.value?.product_color_sizes || [])
-    .map(pcs => pcs.size)
-    .filter(size => size && !seen.has(size.id) && seen.add(size.id));
+  return sizes.filter(size => size && !seen.has(size.id) && seen.add(size.id));
+});
+
+// Проверяем, можно ли добавить товар в корзину
+const canAddToCart = computed(() => {
+  return selectedColor.value && selectedSize.value && quantity.value > 0;
 });
 
 // Форматирование цены
@@ -150,15 +176,61 @@ const increaseQuantity = () => {
   quantity.value++;
 };
 
-// Добавление в корзину
-const addToCart = () => {
-  console.log(`Добавлено в корзину: ${quantity.value}`);
+// Выбор цвета
+const selectColor = (color) => {
+  selectedColor.value = color;
+  selectedSize.value = null; // Сбросить размер при смене цвета
+  error.value = '';
+  successMessage.value = '';
+};
+
+// Выбор размера
+const selectSize = (size) => {
+  selectedSize.value = size;
+  error.value = '';
+  successMessage.value = '';
+};
+
+// Добавление товара в корзину
+const addToCart = async () => {
+  error.value = '';
+  successMessage.value = '';
+
+  if (!selectedColor.value || !selectedSize.value) {
+    error.value = 'Пожалуйста, выберите цвет и размер';
+    return;
+  }
+
+  // Ищем ID связки color+size для отправки на сервер
+  const pcs = product.value.product_color_sizes.find(pcs =>
+    pcs.color.id === selectedColor.value.id && pcs.size.id === selectedSize.value.id
+  );
+
+  if (!pcs) {
+    error.value = 'Выбранный цвет и размер недоступны';
+    return;
+  }
+
+  try {
+    const response = await api.post(`/cart/product/${pcs.id}`, {
+      quantity: quantity.value
+    });
+    successMessage.value = 'Товар успешно добавлен в корзину';
+  } catch (e) {
+    error.value = 'Ошибка при добавлении товара в корзину';
+    console.error(e);
+  }
 };
 
 onMounted(fetchProduct);
 </script>
 
 <style scoped>
+.size-box {
+  background-color: #ff46a0;
+  color: #000;
+  transform: scale(1.1);
+}
 body {
   background-color: #0f0f1f;
 }
@@ -232,19 +304,6 @@ h1 {
 p {
   font-size: 18px;
   color: #c2c2da;
-}
-
-.color-sizes {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin-top: 20px;
-}
-
-.color-size-item {
-  display: flex;
-  align-items: center;
-  gap: 15px;
 }
 
 .color-box {
@@ -342,6 +401,55 @@ p {
 .btn-add-to-cart:hover {
   background-color: #ff46a0;
   box-shadow: 0 0 20px #ff46a0;
+}
+.color-box {
+  width: 40px;
+  height: 40px;
+  border-radius: 4px;
+  border: 2px solid #2e2e3f;
+  cursor: pointer;
+  box-shadow: 0 0 10px rgb(46, 46, 63);
+  transition: transform 0.3s, box-shadow 0.3s, border 0.3s;
+}
+.color-box:hover {
+  transform: scale(1.1);
+  box-shadow: 0 0 10px rgb(46, 46, 63);
+}
+
+.size-box {
+  width: 40px;
+  height: 40px;
+  background-color: #222235;
+  color: #fff;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border-radius: 4px;
+  font-size: 14px;
+  transition: background-color 0.3s ease, transform 0.3s ease;
+  cursor: pointer;
+  user-select: none;
+}
+.size-box:hover {
+  background-color: #ff46a0;
+  transform: scale(1.1);
+  color: #000;
+}
+.size-box.selected {
+  background-color: #ff46a0;
+  color: #000;
+  transform: scale(1.1);
+  font-weight: bold;
+}
+
+.error-message {
+  color: #ff4d6d;
+  margin-top: 10px;
+}
+
+.success-message {
+  color: #7fff7f;
+  margin-top: 10px;
 }
 </style>
 

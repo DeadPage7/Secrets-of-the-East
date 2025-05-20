@@ -23,7 +23,6 @@
 </template>
 
 <script>
-import api from "@/services/api"; // Импорт API для отправки запроса авторизации
 
 export default {
   props: ["show"],

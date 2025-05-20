@@ -6,7 +6,7 @@
       </div>
       <div class="nav-center">
         <a href="#" class="nav-link" @click.prevent="showDeliveryPoints">Пункт выдачи</a>
-        <a href="#" class="nav-link">Корзина</a>
+        <a href="#" class="nav-link" @click.prevent="goToCart">Корзина</a>
         <a href="#" class="nav-link" @click.prevent="handleProfileClick">Профиль</a>
       </div>
       <div class="nav-right">
@@ -84,6 +84,9 @@ export default {
   methods: {
     goHome() {
       this.$router.push('/');
+    },
+    goToCart() {
+      this.$router.push('/cart');
     },
     handleProfileClick() {
       if (this.isAuthenticated) {

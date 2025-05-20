@@ -1,24 +1,32 @@
 <template>
-  <footer class="footer">
-    <div class="footer-content">
-      <button @click="openModal('about')" class="footer-link">О нас</button>
-      <button @click="openModal('contacts')" class="footer-link">Контакты</button>
-    </div>
-    <p class="footer-copy">© 2025 Тайны востока. Все права защищены.</p>
+  <!-- Обёртка всего компонента -->
+  <div>
+    <!-- Футер -->
+    <footer class="footer">
+      <div class="footer-content">
+        <button @click="openModal('about')" class="footer-link">О нас</button>
+        <button @click="openModal('contacts')" class="footer-link">Контакты</button>
+      </div>
+      <p class="footer-copy">© 2025 Тайны востока. Все права защищены.</p>
+    </footer>
 
-    <!-- Модальные окна -->
+    <!-- Модальные окна ВНЕ футера -->
     <div v-if="activeModal" class="modal-overlay" @click.self="closeModal">
       <div class="modal-window">
         <button class="modal-close" @click="closeModal">×</button>
         <div class="modal-content">
           <template v-if="activeModal === 'about'">
             <h3>О нас</h3>
-            <p>«Тайны Востока» — интернет-магазин стильной и доступной одежды из Китая, Кореи и Японии. Мы вдохновляемся восточной культурой и привозим лучшие тренды прямо к вам.</p>
+            <p>
+              «Тайны Востока» — интернет-магазин стильной и доступной одежды из Китая, Кореи и Японии.
+              Мы вдохновляемся восточной культурой и привозим лучшие тренды прямо к вам.
+            </p>
           </template>
           <template v-else-if="activeModal === 'contacts'">
             <h3>Контакты</h3>
             <p>Свяжитесь с нами:</p>
             <div class="employee-cards">
+              <!-- Первый сотрудник -->
               <div class="employee-card">
                 <div class="employee-info">
                   <h4>Федоров Алексей Алексеевич</h4>
@@ -31,13 +39,14 @@
                   </div>
                 </div>
               </div>
+              <!-- Второй сотрудник -->
               <div class="employee-card">
                 <div class="employee-info">
                   <h4>Рюгин Алексей Иваночив</h4>
                   <p>Backend-разработчик</p>
                   <p>Телефон: <a>+7 952 804 6123</a></p>
                   <div class="social-links">
-                    <a href=" https://vk.com/name_unknooown" target="_blank" class="social-link vk">ВКонтакте</a>
+                    <a href="https://vk.com/name_unknooown" target="_blank" class="social-link vk">ВКонтакте</a>
                     <a href="https://t.me/name_unknooown" target="_blank" class="social-link tg">Telegram</a>
                     <a href="https://github.com/Fatalex2005" target="_blank" class="social-link gh">GitHub</a>
                   </div>
@@ -48,7 +57,7 @@
         </div>
       </div>
     </div>
-  </footer>
+  </div>
 </template>
 
 <script setup>
@@ -210,6 +219,7 @@ const closeModal = () => {
   transform: scale(1.1);
 }
 
+/* Анимации */
 @keyframes scaleIn {
   from {
     transform: scale(0.8);
