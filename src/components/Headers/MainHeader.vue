@@ -19,6 +19,18 @@
             @keyup.enter="handleSearch"
           />
         </div>
+
+        <!-- Секретная кнопка, видна если роль === 1 или 2 -->
+        <button
+          v-if="isAdmin"
+          class="secret-button"
+          @click="handleSecretClick"
+          title="Секретная кнопка"
+        >
+          Secret
+        </button>
+
+        <!-- Кнопка выхода, видна только если пользователь авторизован -->
         <button v-if="isAuthenticated" class="logout-button" @click="handleLogout">
           Выйти
         </button>
@@ -38,7 +50,7 @@ import LoginModal from "../auth/LoginModal.vue";
 import ProfileModal from "../auth/ProfileModal.vue";
 import PointsModal from "../Points/PointsModal.vue";
 import { useRouter } from "vue-router";
-import { ref, computed } from "vue";
+import { ref, computed, watch } from "vue";
 import { useStore } from "vuex";
 
 export default {
@@ -52,18 +64,39 @@ export default {
   setup() {
     const router = useRouter();
     const store = useStore();
-    const searchQuery = ref('');
+    const searchQuery = ref("");
 
     const handleSearch = () => {
-      if (router.currentRoute.value.path !== '/') {
-        router.push('/');
+      if (router.currentRoute.value.path !== "/") {
+        router.push("/");
       }
-      window.dispatchEvent(new CustomEvent('search-request', {
-        detail: { query: searchQuery.value.trim() }
-      }));
+      window.dispatchEvent(
+        new CustomEvent("search-request", {
+          detail: { query: searchQuery.value.trim() },
+        })
+      );
     };
 
-    const isAuthenticated = computed(() => store.getters.isLoggedIn);
+    // Проверка авторизации
+    const isAuthenticated = computed(() => store.state.user.loggedIn);
+
+    // Получение роли пользователя
+    const userRole = computed(() => store.state.user?.role || null);
+
+    // Проверка админской роли
+    const isAdmin = computed(() => {
+      const role_id = Number(userRole.value);
+      return role_id === 1 || role_id === 2;
+    });
+
+    // Отладка роли
+    watch(
+      userRole,
+      (newRole) => {
+        console.log("Текущая роль пользователя:", newRole);
+      },
+      { immediate: true }
+    );
 
     return {
       searchQuery,
@@ -71,6 +104,8 @@ export default {
       router,
       isAuthenticated,
       store,
+      userRole,
+      isAdmin,
     };
   },
   data() {
@@ -83,10 +118,10 @@ export default {
   },
   methods: {
     goHome() {
-      this.$router.push('/');
+      this.$router.push("/");
     },
     goToCart() {
-      this.$router.push('/cart');
+      this.$router.push("/cart");
     },
     handleProfileClick() {
       if (this.isAuthenticated) {
@@ -108,18 +143,35 @@ export default {
       this.showProfile = true;
     },
     handleLogout() {
-      this.store.dispatch('logout');
+      this.store.dispatch("logout");
       this.showProfile = false;
     },
     showDeliveryPoints() {
       this.showDeliveryModal = true;
-    }
+    },
+    handleSecretClick() {
+      alert("Секретная кнопка нажата! Только для админов.");
+    },
   },
 };
 </script>
 
 <style scoped>
-/* Панель навигации */
+.secret-button {
+  background-color: #c84b9e;
+  color: white;
+  border: none;
+  border-radius: 20px;
+  padding: 8px 16px;
+  margin-left: 15px;
+  font-size: 16px;
+  cursor: pointer;
+  transition: background-color 0.3s ease, transform 0.2s ease;
+}
+.secret-button:hover {
+  background-color: #ff85c1;
+  transform: scale(1.05);
+}
 .nav-bar {
   display: flex;
   justify-content: center;
@@ -133,7 +185,6 @@ export default {
   z-index: 2;
   animation: slideDown 0.5s ease-out;
 }
-
 .header {
   background-color: #0f0f1f;
   color: #ffffff;
@@ -141,13 +192,10 @@ export default {
   box-shadow: 0 4px 12px rgba(200, 75, 158, 0.4);
   position: relative;
 }
-
-/* Левый блок */
 .nav-left {
   position: absolute;
   left: 30px;
 }
-
 .store-name {
   font-family: 'Inter', sans-serif;
   font-size: 24px;
@@ -158,21 +206,16 @@ export default {
   text-decoration: none;
   transition: color 0.3s ease, transform 0.3s ease;
 }
-
 .store-name:hover {
   color: #ff85c1;
   transform: scale(1.05);
 }
-
-/* Центровка навигации */
 .nav-center {
   display: flex;
   gap: 30px;
   justify-content: center;
   flex: 2;
 }
-
-/* Ссылки навигации */
 .nav-link {
   font-family: 'Inter', sans-serif;
   font-size: 20px;
@@ -182,12 +225,10 @@ export default {
   position: relative;
   transition: color 0.3s ease, transform 0.3s ease;
 }
-
 .nav-link:hover {
   color: #c84b9e;
   transform: scale(1.1);
 }
-
 .nav-link:after {
   content: '';
   position: absolute;
@@ -200,20 +241,16 @@ export default {
   transform-origin: bottom right;
   transition: transform 0.3s ease;
 }
-
 .nav-link:hover:after {
   transform: scaleX(1);
   transform-origin: bottom left;
 }
-
-/* Правый блок */
 .nav-right {
   position: absolute;
   right: 30px;
   display: flex;
   align-items: center;
 }
-
 .search-container {
   display: flex;
   align-items: center;
@@ -223,7 +260,6 @@ export default {
   border: 1px solid #444;
   animation: fadeIn 1s ease-out;
 }
-
 .search-input {
   background-color: transparent;
   color: #ffffff;
@@ -234,15 +270,12 @@ export default {
   width: 200px;
   transition: width 0.3s ease;
 }
-
 .search-input::placeholder {
   color: #ccc;
 }
-
 .search-input:focus {
   width: 250px;
 }
-
 .logout-button {
   background-color: #c84b9e;
   color: white;
@@ -254,13 +287,10 @@ export default {
   cursor: pointer;
   transition: background-color 0.3s ease, transform 0.2s ease;
 }
-
 .logout-button:hover {
   background-color: #ff85c1;
   transform: scale(1.05);
 }
-
-/* Анимации */
 @keyframes slideDown {
   from {
     opacity: 0;
@@ -271,7 +301,6 @@ export default {
     transform: translateY(0);
   }
 }
-
 @keyframes fadeIn {
   from {
     opacity: 0;
