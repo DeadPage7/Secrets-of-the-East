@@ -43,11 +43,11 @@
 </template>
 
 <script>
-import api from "@/services/api"; // Импортируем API для работы с сервером
+import api from "@/services/api"; // Импорт API для общения с backend
 
 export default {
-  props: ["show"], // Пропс для показа модального окна
-  emits: ["close", "switchToLogin"], // События для взаимодействия с родительским компонентом
+  props: ["show"], // Пропс для контроля показа модального окна
+  emits: ["close", "switchToLogin", "openProfile"], // События для взаимодействия с родителем
   data() {
     return {
       name: "",
@@ -55,40 +55,37 @@ export default {
       phone: "",
       password: "",
       gender: "male",
-      errors: {} // Объект для хранения ошибок
+      errors: {} // Объект для хранения ошибок валидации
     };
   },
   methods: {
-    // Метод для регистрации пользователя
+    // Метод регистрации пользователя
     async register() {
-      this.errors = {}; // Очищаем предыдущие ошибки
+      this.errors = {}; // Сброс ошибок перед отправкой
 
       try {
         const requestData = {
           name: this.name,
           email: this.email,
-          telephone: this.phone ? this.phone : null, // Если телефон пуст, отправляем null
-          sex: this.gender === "male" ? true : false, // Преобразуем пол в boolean
+          telephone: this.phone ? this.phone : null, // Телефон может быть null
+          sex: this.gender === "male", // Преобразуем в boolean
           password: this.password,
         };
 
-        const response = await api.post("/register", requestData); // Отправляем запрос на сервер
+        const response = await api.post("/register", requestData); // Запрос регистрации
 
-        if (response.status === 201) { // Если регистрация прошла успешно
-          // Сохраняем токен в localStorage
+        if (response.status === 201) {
+          // Если успешно, сохраняем токен и закрываем модалку
           localStorage.setItem('auth_token', response.data.token);
-
           alert("Вы успешно зарегистрированы!");
-          this.$emit("close"); // Закрываем окно регистрации
-
-          // Открываем модальное окно профиля
-          this.$emit("openProfile");
+          this.$emit("close"); // Закрываем окно
+          this.$emit("openProfile"); // Открываем окно профиля
         }
       } catch (error) {
         if (error.response) {
-          const serverErrors = error.response.data.errors; // Получаем ошибки от сервера
+          const serverErrors = error.response.data.errors;
           if (serverErrors) {
-            this.errors = serverErrors; // Присваиваем ошибки в объект errors
+            this.errors = serverErrors; // Показываем ошибки от сервера
           } else {
             alert(error.response.data.message || "Ошибка регистрации");
           }
@@ -98,10 +95,10 @@ export default {
       }
     },
 
-    // Переключение на форму авторизации
+    // Переход к форме авторизации
     switchToLogin() {
-      this.$emit("switchToLogin"); // Сигнализируем родителю о переходе на форму авторизации
-      this.$emit("close"); // Закрываем окно регистрации
+      this.$emit("switchToLogin");
+      this.$emit("close");
     },
 
     // Закрытие модального окна
@@ -111,6 +108,7 @@ export default {
   },
 };
 </script>
+
 
 <style scoped>
 /* Стили для текста ссылки "Авторизация" */

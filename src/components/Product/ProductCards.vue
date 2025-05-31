@@ -38,7 +38,6 @@
           <h3 class="product-name">{{ product.name }}</h3>
           <div class="product-price">
             <span class="current-price">{{ formatPrice(calculatePrice(product)) }}</span>
-            <span v-if="product.discount" class="old-price">{{ formatPrice(product.price) }}</span>
           </div>
         </div>
       </div>

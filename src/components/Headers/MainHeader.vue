@@ -20,14 +20,14 @@
           />
         </div>
 
-        <!-- Секретная кнопка, видна если роль === 1 или 2 -->
+        <!-- Кнопка Инструменты, видна если роль === 1 или 2 -->
         <button
           v-if="isAdmin"
           class="secret-button"
           @click="handleSecretClick"
-          title="Секретная кнопка"
+          title="Инструменты"
         >
-          Secret
+          Инструменты
         </button>
 
         <!-- Кнопка выхода, видна только если пользователь авторизован -->
@@ -41,6 +41,7 @@
     <LoginModal v-if="showLogin" @close="showLogin = false" @switchToRegister="switchToRegister" @loginSuccess="showProfileModal" />
     <ProfileModal v-if="showProfile" @close="showProfile = false" @logout="handleLogout" />
     <PointsModal v-show="showDeliveryModal" @close="showDeliveryModal = false" />
+    <AdminPanelModal v-if="showAdminModal" @close="showAdminModal = false" />
   </header>
 </template>
 
@@ -49,6 +50,7 @@ import RegisterModal from "../auth/RegisterModal.vue";
 import LoginModal from "../auth/LoginModal.vue";
 import ProfileModal from "../auth/ProfileModal.vue";
 import PointsModal from "../Points/PointsModal.vue";
+import AdminPanelModal from "../admin/AdminPanelModal.vue";
 import { useRouter } from "vue-router";
 import { ref, computed, watch } from "vue";
 import { useStore } from "vuex";
@@ -60,6 +62,7 @@ export default {
     LoginModal,
     ProfileModal,
     PointsModal,
+    AdminPanelModal,
   },
   setup() {
     const router = useRouter();
@@ -114,11 +117,15 @@ export default {
       showLogin: false,
       showProfile: false,
       showDeliveryModal: false,
+      showAdminModal: false,
     };
   },
   methods: {
     goHome() {
       this.$router.push("/");
+    },
+    handleSecretClick() {
+      this.showAdminModal = true;
     },
     goToCart() {
       this.$router.push("/cart");
@@ -148,9 +155,6 @@ export default {
     },
     showDeliveryPoints() {
       this.showDeliveryModal = true;
-    },
-    handleSecretClick() {
-      alert("Секретная кнопка нажата! Только для админов.");
     },
   },
 };

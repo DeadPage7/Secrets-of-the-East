@@ -24,8 +24,7 @@ export default {
 </script>
 
 <style>
-/* Устанавливаем полную высоту для html, body и корневого div (#app) */
-html, body, #app {
+html, body {
   height: 100%;
   margin: 0;
   padding: 0;

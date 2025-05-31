@@ -1,20 +1,20 @@
 <template>
-  <!-- Модальное окно для авторизации -->
+  <!-- Оверлей модального окна авторизации -->
   <div class="modal-overlay" @click.self="close">
     <div class="modal">
-      <!-- Кнопка закрытия модального окна -->
+      <!-- Кнопка закрытия -->
       <button class="close-btn" @click="close">×</button>
       <h2 class="modal-title">Авторизация</h2>
       <form @submit.prevent="login">
-        <!-- Поле для ввода email -->
+        <!-- Ввод email -->
         <input v-model="email" type="email" placeholder="Email" required />
-        <!-- Поле для ввода пароля -->
+        <!-- Ввод пароля -->
         <input v-model="password" type="password" placeholder="Пароль" required />
-        <!-- Кнопка для отправки формы -->
+        <!-- Кнопка входа -->
         <button type="submit" class="submit-btn">Войти</button>
       </form>
 
-      <!-- Кнопка для перехода к регистрации -->
+      <!-- Ссылка для перехода к регистрации -->
       <p class="switch-to-register">
         Нет аккаунта? <span @click="switchToRegister" class="link">Зарегистрироваться</span>
       </p>
@@ -23,36 +23,46 @@
 </template>
 
 <script>
-import api from "@/services/api"; // Импорт API для отправки запроса авторизации
-
 export default {
   props: ["show"],
-  emits: ["close", "switchToRegister"], // События для закрытия окна и перехода к регистрации
+  emits: ["close", "switchToRegister"], // События для управления окнами
   data() {
     return {
-      email: "", // Ввод email
-      password: "", // Ввод пароля
+      email: "",
+      password: "",
     };
   },
   methods: {
+    // Метод входа
     async login() {
       try {
-        // Вызываем экшен login из Vuex
+        // Вызов Vuex экшена для логина
         await this.$store.dispatch("login", {
           email: this.email,
           password: this.password,
         });
 
-        // После успешного входа — закрываем модалку
-        this.$emit("close");
+        this.$emit("close"); // Закрываем окно при успехе
       } catch (error) {
         console.error("Ошибка входа:", error);
-        // Тут можно показать сообщение об ошибке (например, через alert или переменную ошибки)
+        alert("Неверный email или пароль");
       }
     },
-  }
+
+    // Переход к регистрации
+    switchToRegister() {
+      this.$emit("switchToRegister");
+      this.$emit("close");
+    },
+
+    // Закрытие модального окна
+    close() {
+      this.$emit("close");
+    },
+  },
 };
 </script>
+
 
 <style scoped>
 /* Стили для фона модального окна */
