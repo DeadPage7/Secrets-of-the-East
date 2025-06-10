@@ -1,41 +1,35 @@
 <template>
   <div class="cart-checkout">
-    <!-- Информация о выбранном пункте выдачи -->
     <div v-if="selectedPoint" class="delivery-point-info">
       <h4>Пункт выдачи:</h4>
       <p>{{ selectedPoint.city }}, {{ selectedPoint.street }}, {{ selectedPoint.house }}</p>
-      <p v-if="selectedPoint.additional_info">({{ selectedPoint.additional_info }})</p>
+      <p v-if="selectedPoint.additional_info">({{ selectedPoint.additional_info}})</p>
       <button class="change-point-btn" @click="changePoint">Изменить</button>
     </div>
 
-    <!-- Если пункт выдачи не выбран -->
     <div v-else class="no-point-selected">
       <p>Пункт выдачи не выбран</p>
       <button class="select-point-btn" @click="selectPoint">Выбрать пункт</button>
     </div>
 
     <h3>Итого</h3>
-    <!-- Отображение итоговой стоимости -->
     <p class="total-cost">{{ totalCost }} ₽</p>
 
-    <!-- Кнопка оформления заказа -->
     <button
       class="order-btn"
       @click="placeOrder"
-      :disabled="totalCost === 0 || !selectedPoint"
+      :disabled="totalCost === 0 || !selectedPoint || isLoading"
     >
-      Оформить заказ
+      {{ isLoading ? "Оформляем..." : "Оформить заказ" }}
     </button>
   </div>
 </template>
 
 <script setup>
-import { computed } from "vue";
+import { computed, ref } from "vue";
 import { useStore } from "vuex";
+import api from "@/services/api";
 
-const store = useStore();
-
-// Принимаем итоговую стоимость из пропсов
 const props = defineProps({
   totalCost: {
     type: Number,
@@ -43,27 +37,47 @@ const props = defineProps({
   },
 });
 
-// Получаем выбранный пункт выдачи из Vuex
+const store = useStore();
+const isLoading = ref(false);
+
+// Получение выбранного пункта выдачи
 const selectedPoint = computed(() => store.state.selectedPoint);
 
-// Функция оформления заказа
-const placeOrder = () => {
-  if (!selectedPoint.value) {
-    alert("Пожалуйста, выберите пункт выдачи");
-    return;
-  }
-  // Логика оформления заказа, например, отправка данных на сервер
-  alert(`Заказ оформлен! Пункт выдачи: ${selectedPoint.value.city}, ${selectedPoint.value.street}`);
-};
-
-// Открытие модального окна выбора пункта
+// Открыть окно выбора пункта
 const selectPoint = () => {
   store.commit("setShowDeliveryModal", true);
 };
 
-// Изменение выбранного пункта
 const changePoint = () => {
   store.commit("setShowDeliveryModal", true);
+};
+
+// Основной метод оформления заказа
+const placeOrder = async () => {
+  if (!selectedPoint.value) {
+    alert("Пожалуйста, выберите пункт выдачи");
+    return;
+  }
+
+  isLoading.value = true;
+
+  try {
+    // Отправляем запрос на оформление заказа
+    const response = await api.post("/order", {
+      point_id: selectedPoint.value.id,
+    });
+
+    // Если нужна оплата — перенаправляем пользователя
+    if (response.data.status === "payment_required") {
+      window.location.href = response.data.payment_url;
+    } else {
+      alert("Заказ оформлен без оплаты");
+    }
+  } catch (error) {
+    alert(error.response?.data?.message || "Ошибка при оформлении заказа");
+  } finally {
+    isLoading.value = false;
+  }
 };
 </script>
 

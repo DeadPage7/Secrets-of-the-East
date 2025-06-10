@@ -4,11 +4,13 @@
       <div class="nav-left">
         <a href="#" class="store-name" @click.prevent="goHome">Тайны Востока</a>
       </div>
+
       <div class="nav-center">
         <a href="#" class="nav-link" @click.prevent="showDeliveryPoints">Пункт выдачи</a>
         <a href="#" class="nav-link" @click.prevent="goToCart">Корзина</a>
         <a href="#" class="nav-link" @click.prevent="handleProfileClick">Профиль</a>
       </div>
+
       <div class="nav-right">
         <div class="search-container">
           <input
@@ -29,21 +31,45 @@
           Инструменты
         </button>
 
-        <button v-if="isAuthenticated" class="logout-button" @click="handleLogout">
+        <button
+          v-if="isAuthenticated"
+          class="logout-button"
+          @click="handleLogout"
+        >
           Выйти
         </button>
       </div>
     </div>
 
-    <RegisterModal v-if="showRegister" @close="showRegister = false" @switchToLogin="switchToLogin" />
-    <LoginModal v-if="showLogin" @close="showLogin = false" @switchToRegister="switchToRegister" @loginSuccess="showProfileModal" />
-    <ProfileModal v-if="showProfile" @close="showProfile = false" @logout="handleLogout" />
+    <!-- Модальные окна -->
+    <RegisterModal
+      v-if="showRegister"
+      @close="showRegister = false"
+      @switchToLogin="switchToLogin"
+    />
+    <LoginModal
+      v-if="showLogin"
+      @close="showLogin = false"
+      @switchToRegister="switchToRegister"
+      @loginSuccess="showProfileModal"
+    />
+    <ProfileModal
+      v-if="showProfile"
+      @close="showProfile = false"
+      @logout="handleLogout"
+    />
+
+    <!-- Управляем модалкой выбора пункта выдачи через Vuex -->
     <PointsModal
-      v-show="showDeliveryModal"
-      @close="showDeliveryModal = false"
+      v-show="store.state.showDeliveryModal"
+      @close="store.commit('setShowDeliveryModal', false)"
       @select="handlePointSelect"
     />
-    <AdminPanelModal v-if="showAdminModal" @close="showAdminModal = false" />
+
+    <AdminPanelModal
+      v-if="showAdminModal"
+      @close="showAdminModal = false"
+    />
   </header>
 </template>
 
@@ -53,8 +79,9 @@ import LoginModal from "../auth/LoginModal.vue";
 import ProfileModal from "../auth/ProfileModal.vue";
 import PointsModal from "../Points/PointsModal.vue";
 import AdminPanelModal from "../admin/AdminPanelModal.vue";
+
 import { useRouter } from "vue-router";
-import { ref, computed, watch } from "vue";
+import { ref, computed } from "vue";
 import { useStore } from "vuex";
 
 export default {
@@ -69,9 +96,14 @@ export default {
   setup() {
     const router = useRouter();
     const store = useStore();
-    const searchQuery = ref("");
-    const selectedPoint = ref(null);
 
+    const searchQuery = ref("");
+    const showRegister = ref(false);
+    const showLogin = ref(false);
+    const showProfile = ref(false);
+    const showAdminModal = ref(false);
+
+    // Обработка поиска при нажатии Enter
     const handleSearch = () => {
       if (router.currentRoute.value.path !== "/") {
         router.push("/");
@@ -83,9 +115,10 @@ export default {
       );
     };
 
+    // Выбор пункта выдачи — сохраняем в хранилище и закрываем окно
     const handlePointSelect = (point) => {
-      selectedPoint.value = point;
-      store.commit('setSelectedPoint', point); // Сохраняем в хранилище
+      store.commit("setSelectedPoint", point);
+      store.commit("setShowDeliveryModal", false);
     };
 
     // Проверка авторизации
@@ -94,31 +127,30 @@ export default {
     // Получение роли пользователя
     const userRole = computed(() => store.state.user?.role || null);
 
-    // Проверка админской роли
+    // Является ли пользователь админом
     const isAdmin = computed(() => {
       const role_id = Number(userRole.value);
       return role_id === 1 || role_id === 2;
     });
 
+    // Открыть модалку выбора пункта выдачи
+    const showDeliveryPoints = () => {
+      store.commit("setShowDeliveryModal", true);
+    };
+
     return {
+      store,
+      router,
       searchQuery,
       handleSearch,
-      router,
-      isAuthenticated,
-      store,
-      userRole,
-      isAdmin,
-      selectedPoint,
+      showRegister,
+      showLogin,
+      showProfile,
+      showAdminModal,
       handlePointSelect,
-    };
-  },
-  data() {
-    return {
-      showRegister: false,
-      showLogin: false,
-      showProfile: false,
-      showDeliveryModal: false,
-      showAdminModal: false,
+      showDeliveryPoints,
+      isAuthenticated,
+      isAdmin,
     };
   },
   methods: {
@@ -132,7 +164,7 @@ export default {
       this.$router.push("/cart");
     },
     handleProfileClick() {
-      if (this.isAuthenticated) {
+      if (this.store.state.user.loggedIn) {
         this.showProfile = true;
       } else {
         this.showLogin = true;
@@ -153,9 +185,6 @@ export default {
     handleLogout() {
       this.store.dispatch("logout");
       this.showProfile = false;
-    },
-    showDeliveryPoints() {
-      this.showDeliveryModal = true;
     },
   },
 };

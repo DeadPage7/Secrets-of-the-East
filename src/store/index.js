@@ -3,14 +3,14 @@ import api from "@/services/api";
 
 export default createStore({
   state: {
-    selectedPoint: null,
-    showDeliveryModal: false,
-    isLoading: false, // индикатор загрузки
+    selectedPoint: null,          // выбранный пункт выдачи
+    showDeliveryModal: false,     // видимость модального окна
+    isLoading: false,             // индикатор загрузки
     user: {
-      loggedIn: !!localStorage.getItem('auth_token'), // проверяем, есть ли токен в локальном хранилище
+      loggedIn: !!localStorage.getItem('auth_token'),
       name: localStorage.getItem('userName') || '',
       email: localStorage.getItem('userEmail') || '',
-      role: Number(localStorage.getItem('userRole')) || null, // роль пользователя, приводим к числу
+      role: Number(localStorage.getItem('userRole')) || null,
     },
   },
   mutations: {
@@ -18,26 +18,24 @@ export default createStore({
       state.isLoading = value;
     },
     setSelectedPoint(state, point) {
-      state.selectedPoint = point;
+      state.selectedPoint = point;   // сохраняем выбранный пункт
     },
     setShowDeliveryModal(state, value) {
       state.showDeliveryModal = value;
     },
     setUser(state, user) {
-      // сохраняем данные пользователя и токен
       state.user = {
         loggedIn: true,
         name: user.name,
         email: user.email,
-        role: Number(user.role), // роль обязательно числом
+        role: Number(user.role),
       };
       localStorage.setItem('auth_token', user.token);
       localStorage.setItem('userName', user.name);
       localStorage.setItem('userEmail', user.email);
-      localStorage.setItem('userRole', user.role); // сохраняем роль в localStorage
+      localStorage.setItem('userRole', user.role);
     },
     logout(state) {
-      // очистка данных при выходе
       state.user = { loggedIn: false, name: '', email: '', role: null };
       localStorage.removeItem('auth_token');
       localStorage.removeItem('userName');
@@ -55,32 +53,30 @@ export default createStore({
     async login({ commit }, userCredentials) {
       try {
         const response = await api.post('/login', userCredentials);
-        console.log('Login response:', response.data);
-
         if (!response.data || !response.data.token) {
           throw new Error('Неверная структура ответа сервера');
         }
-
         commit('setUser', {
           token: response.data.token,
           name: response.data.user.name || userCredentials.email,
           email: response.data.user.email || userCredentials.email,
-          role: response.data.user.role_id,  // <-- вот тут важно
+          role: response.data.user.role_id,
         });
       } catch (error) {
-        console.error('Ошибка авторизации:', error);
         throw error;
       }
     },
     async logout({ commit }) {
       try {
-        await api.post('/logout'); // уведомляем сервер о выходе
-        console.log('Сервер успешно завершил сессию');
+        await api.post('/logout');
       } catch (error) {
-        console.warn('Ошибка при выходе с сервера (возможно, токен уже недействителен):', error);
+        // игнорируем ошибку выхода с сервера
       } finally {
-        commit('logout'); // локально очищаем данные в любом случае
+        commit('logout');
       }
+    },
+    setSelectedPoint({ commit }, point) {
+      commit('setSelectedPoint', point); // действие для выбора пункта
     },
   },
   getters: {
@@ -88,8 +84,10 @@ export default createStore({
     isLoggedIn: (state) => state.user.loggedIn,
     userName: (state) => state.user.name,
     userRole: (state) => state.user.role,
-    isAdmin: (state) => state.user.role === 1,     // роль 1 — админ
-    isManager: (state) => state.user.role === 2,   // роль 2 — менеджер
-    isUser: (state) => state.user.role === 3,      // роль 3 — обычный пользователь
+    isAdmin: (state) => state.user.role === 1,
+    isManager: (state) => state.user.role === 2,
+    isUser: (state) => state.user.role === 3,
+    selectedPoint: (state) => state.selectedPoint,   // геттер выбранного пункта
+    showDeliveryModal: (state) => state.showDeliveryModal,
   },
 });
