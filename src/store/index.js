@@ -3,6 +3,8 @@ import api from "@/services/api";
 
 export default createStore({
   state: {
+    selectedPoint: null,
+    showDeliveryModal: false,
     isLoading: false, // индикатор загрузки
     user: {
       loggedIn: !!localStorage.getItem('auth_token'), // проверяем, есть ли токен в локальном хранилище
@@ -14,6 +16,12 @@ export default createStore({
   mutations: {
     setLoading(state, value) {
       state.isLoading = value;
+    },
+    setSelectedPoint(state, point) {
+      state.selectedPoint = point;
+    },
+    setShowDeliveryModal(state, value) {
+      state.showDeliveryModal = value;
     },
     setUser(state, user) {
       // сохраняем данные пользователя и токен

@@ -20,7 +20,6 @@
           />
         </div>
 
-        <!-- Кнопка Инструменты, видна если роль === 1 или 2 -->
         <button
           v-if="isAdmin"
           class="secret-button"
@@ -30,7 +29,6 @@
           Инструменты
         </button>
 
-        <!-- Кнопка выхода, видна только если пользователь авторизован -->
         <button v-if="isAuthenticated" class="logout-button" @click="handleLogout">
           Выйти
         </button>
@@ -40,7 +38,11 @@
     <RegisterModal v-if="showRegister" @close="showRegister = false" @switchToLogin="switchToLogin" />
     <LoginModal v-if="showLogin" @close="showLogin = false" @switchToRegister="switchToRegister" @loginSuccess="showProfileModal" />
     <ProfileModal v-if="showProfile" @close="showProfile = false" @logout="handleLogout" />
-    <PointsModal v-show="showDeliveryModal" @close="showDeliveryModal = false" />
+    <PointsModal
+      v-show="showDeliveryModal"
+      @close="showDeliveryModal = false"
+      @select="handlePointSelect"
+    />
     <AdminPanelModal v-if="showAdminModal" @close="showAdminModal = false" />
   </header>
 </template>
@@ -68,6 +70,7 @@ export default {
     const router = useRouter();
     const store = useStore();
     const searchQuery = ref("");
+    const selectedPoint = ref(null);
 
     const handleSearch = () => {
       if (router.currentRoute.value.path !== "/") {
@@ -78,6 +81,11 @@ export default {
           detail: { query: searchQuery.value.trim() },
         })
       );
+    };
+
+    const handlePointSelect = (point) => {
+      selectedPoint.value = point;
+      store.commit('setSelectedPoint', point); // Сохраняем в хранилище
     };
 
     // Проверка авторизации
@@ -92,15 +100,6 @@ export default {
       return role_id === 1 || role_id === 2;
     });
 
-    // Отладка роли
-    watch(
-      userRole,
-      (newRole) => {
-        console.log("Текущая роль пользователя:", newRole);
-      },
-      { immediate: true }
-    );
-
     return {
       searchQuery,
       handleSearch,
@@ -109,6 +108,8 @@ export default {
       store,
       userRole,
       isAdmin,
+      selectedPoint,
+      handlePointSelect,
     };
   },
   data() {

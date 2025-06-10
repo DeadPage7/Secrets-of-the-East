@@ -9,7 +9,17 @@
         <div v-else-if="error" class="error">{{ error }}</div>
         <div v-else-if="points.length === 0" class="no-points">Нет доступных пунктов выдачи</div>
 
-        <div v-else v-for="point in points" :key="point.id" class="point-item">
+        <div
+          v-else
+          v-for="point in points"
+          :key="point.id"
+          class="point-item"
+          :class="{ selected: selectedPoint && selectedPoint.id === point.id }"
+          @click="selectPoint(point)"
+          tabindex="0"
+          role="button"
+          @keydown.enter.space.prevent="selectPoint(point)"
+        >
           <div class="point-card">
             <div class="point-header">
               <h3>{{ point.city }}</h3>
@@ -37,7 +47,8 @@ export default {
     return {
       points: [],
       loading: false,
-      error: null
+      error: null,
+      selectedPoint: null, // выбранный пункт выдачи
     };
   },
   methods: {
@@ -56,10 +67,23 @@ export default {
       } finally {
         this.loading = false;
       }
+    },
+    selectPoint(point) {
+      this.selectedPoint = point;
+      this.$emit('select', point); // отправляем выбранный пункт наружу
     }
   },
   mounted() {
+    // Загружаем пункты при инициализации компонента
     this.fetchPoints();
+  },
+  watch: {
+    show(newVal) {
+      if (newVal) {
+        this.selectedPoint = null; // сброс выбора при открытии
+        this.fetchPoints();        // обновляем список пунктов при каждом открытии
+      }
+    }
   }
 };
 </script>
@@ -85,8 +109,8 @@ export default {
   border-radius: 12px;
   max-width: 600px;
   width: 90%;
-  max-height: 80vh; /* Ограничение высоты модалки */
-  overflow: hidden; /* Запрещаем прокрутку всего модального окна */
+  max-height: 80vh;
+  overflow: hidden;
   position: relative;
   color: white;
   border: 2px solid #c84b9e;
@@ -121,10 +145,10 @@ export default {
 
 .points-list {
   margin-top: 20px;
-  max-height: 60vh; /* Ограничение высоты списка */
-  overflow-y: auto; /* Появляется скролл только для списка */
+  max-height: 60vh;
+  overflow-y: auto;
   scrollbar-width: thin;
-  scrollbar-color: #c84b9e #333348; /* Цвет скроллбаров */
+  scrollbar-color: #c84b9e #333348;
 }
 
 .points-list::-webkit-scrollbar {
@@ -146,12 +170,28 @@ export default {
   background: #333348;
   border-radius: 8px;
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
-  transition: transform 0.2s ease;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  cursor: pointer;
+  outline: none;
 }
 
-.point-item:hover {
+.point-item:hover,
+.point-item:focus {
   transform: translateY(-5px);
   box-shadow: 0 8px 15px rgba(0, 0, 0, 0.3);
+}
+
+/* Подсветка выбранного пункта */
+.point-item.selected {
+  background: #c84b9e;
+  box-shadow: 0 0 15px #ff85c1;
+  color: white;
+}
+
+.point-item.selected .point-header h3,
+.point-item.selected .point-details p,
+.point-item.selected .additional-info {
+  color: white;
 }
 
 .point-card {
