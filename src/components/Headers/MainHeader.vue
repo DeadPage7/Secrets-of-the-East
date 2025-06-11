@@ -9,6 +9,8 @@
         <a href="#" class="nav-link" @click.prevent="showDeliveryPoints">Пункт выдачи</a>
         <a href="#" class="nav-link" @click.prevent="goToCart">Корзина</a>
         <a href="#" class="nav-link" @click.prevent="handleProfileClick">Профиль</a>
+        <!-- Кнопка "Заказы" теперь вызывает метод openOrdersModal -->
+        <a href="#" class="nav-link" @click.prevent="openOrdersModal">Заказы</a>
       </div>
 
       <div class="nav-right">
@@ -59,7 +61,6 @@
       @logout="handleLogout"
     />
 
-    <!-- Управляем модалкой выбора пункта выдачи через Vuex -->
     <PointsModal
       v-show="store.state.showDeliveryModal"
       @close="store.commit('setShowDeliveryModal', false)"
@@ -70,6 +71,12 @@
       v-if="showAdminModal"
       @close="showAdminModal = false"
     />
+
+    <!-- Модалка заказов с управлением видимостью через showOrdersModal -->
+    <MyOrdersModal
+      v-if="showOrdersModal"
+      @close="showOrdersModal = false"
+    />
   </header>
 </template>
 
@@ -79,6 +86,7 @@ import LoginModal from "../auth/LoginModal.vue";
 import ProfileModal from "../auth/ProfileModal.vue";
 import PointsModal from "../Points/PointsModal.vue";
 import AdminPanelModal from "../admin/AdminPanelModal.vue";
+import MyOrdersModal from "../order/MyOrderModal.vue";
 
 import { useRouter } from "vue-router";
 import { ref, computed } from "vue";
@@ -92,18 +100,25 @@ export default {
     ProfileModal,
     PointsModal,
     AdminPanelModal,
+    MyOrdersModal,
   },
   setup() {
     const router = useRouter();
     const store = useStore();
 
+    // Поисковый запрос
     const searchQuery = ref("");
+
+    // Флаги отображения модальных окон
     const showRegister = ref(false);
     const showLogin = ref(false);
     const showProfile = ref(false);
     const showAdminModal = ref(false);
 
-    // Обработка поиска при нажатии Enter
+    // Флаг отображения модалки заказов
+    const showOrdersModal = ref(false);
+
+    // Обработчик поиска по нажатию Enter
     const handleSearch = () => {
       if (router.currentRoute.value.path !== "/") {
         router.push("/");
@@ -115,19 +130,19 @@ export default {
       );
     };
 
-    // Выбор пункта выдачи — сохраняем в хранилище и закрываем окно
+    // Обработчик выбора пункта выдачи
     const handlePointSelect = (point) => {
       store.commit("setSelectedPoint", point);
       store.commit("setShowDeliveryModal", false);
     };
 
-    // Проверка авторизации
+    // Проверка, авторизован ли пользователь
     const isAuthenticated = computed(() => store.state.user.loggedIn);
 
-    // Получение роли пользователя
+    // Роль пользователя
     const userRole = computed(() => store.state.user?.role || null);
 
-    // Является ли пользователь админом
+    // Проверка, является ли пользователь админом
     const isAdmin = computed(() => {
       const role_id = Number(userRole.value);
       return role_id === 1 || role_id === 2;
@@ -139,14 +154,15 @@ export default {
     };
 
     return {
-      store,
       router,
+      store,
       searchQuery,
       handleSearch,
       showRegister,
       showLogin,
       showProfile,
       showAdminModal,
+      showOrdersModal,      // реактивный флаг видимости модалки заказов
       handlePointSelect,
       showDeliveryPoints,
       isAuthenticated,
@@ -154,6 +170,10 @@ export default {
     };
   },
   methods: {
+    // Переименованный метод для открытия модалки заказов
+    openOrdersModal() {
+      this.showOrdersModal = true;
+    },
     goHome() {
       this.$router.push("/");
     },
@@ -191,6 +211,7 @@ export default {
 </script>
 
 <style scoped>
+/* Ваши стили */
 .secret-button {
   background-color: #c84b9e;
   color: white;
@@ -258,6 +279,7 @@ export default {
   text-decoration: none;
   position: relative;
   transition: color 0.3s ease, transform 0.3s ease;
+  cursor: pointer;
 }
 .nav-link:hover {
   color: #c84b9e;

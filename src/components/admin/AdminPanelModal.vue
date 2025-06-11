@@ -9,7 +9,6 @@
         <!-- Кнопки для менеджера и администратора -->
         <template v-if="isManager || isAdmin">
           <button class="admin-btn" @click="showCreateProduct = true">Создать товар</button>
-          <!-- Управляем открытием модалки заказов через метод -->
           <button class="admin-btn" @click="openUserOrdersModal">Заказы</button>
         </template>
 
@@ -18,6 +17,7 @@
           <button class="admin-btn" @click="showCreateManager = true">Менеджеры</button>
           <button class="admin-btn" @click="showCreateCategory = true">Создать категорию</button>
           <button class="admin-btn" @click="showCreatePoint = true">Пункт выдачи</button>
+          <button class="admin-btn" @click="showAllUsersModal = true">Пользователи</button>
         </template>
 
         <button class="close-btn" @click="$emit('close')">Закрыть</button>
@@ -30,32 +30,37 @@
     <CreatePointsModal v-if="showCreatePoint" @close="showCreatePoint = false" />
     <UserOrdersModal v-if="showUserOrdersModal" @close="showUserOrdersModal = false" />
     <CreateCategoryModal v-if="showCreateCategory" @close="showCreateCategory = false" />
+    <AllUsersModal v-if="showAllUsersModal" @close="showAllUsersModal = false" />
   </div>
 </template>
 
 <script setup>
-import { ref, computed, nextTick } from 'vue'
-import { useStore } from 'vuex'
+import {ref, computed, nextTick} from 'vue'
+import {useStore} from 'vuex'
 
+// Импорты компонентов
 import CreateProductModal from '../admin/CreateProductModal.vue'
 import CreateManagerModal from '../admin/CreateManagerModal.vue'
 import CreatePointsModal from '../admin/CreatePointsModal.vue'
 import UserOrdersModal from '../admin/UserOrdersModal.vue'
 import CreateCategoryModal from '../admin/CreateCategoryModal.vue'
+import AllUsersModal from '../admin/AllUsersModal.vue' // ✅ Подключаем модалку пользователей
 
+// Переменные управления видимостью окон
 const showCreateProduct = ref(false)
 const showCreateManager = ref(false)
 const showCreatePoint = ref(false)
 const showUserOrdersModal = ref(false)
 const showCreateCategory = ref(false)
+const showAllUsersModal = ref(false) // ✅ Переменная для отображения окна пользователей
 
+// Получаем роль из store
 const store = useStore()
-
 const userRole = computed(() => Number(store.state.user?.role || 0))
 const isAdmin = computed(() => userRole.value === 1)
 const isManager = computed(() => userRole.value === 2)
 
-// Метод для повторного открытия модалки заказов
+// Метод повторного открытия модалки заказов (если нужно сбросить данные)
 function openUserOrdersModal() {
   showUserOrdersModal.value = false
   nextTick(() => {
@@ -71,7 +76,7 @@ function openUserOrdersModal() {
   left: 0;
   width: 100%;
   height: 100%;
-  background-color: rgba(0, 0, 0, 0.7); /* затемнение фона */
+  background-color: rgba(0, 0, 0, 0.7);
   display: flex;
   justify-content: center;
   align-items: center;
