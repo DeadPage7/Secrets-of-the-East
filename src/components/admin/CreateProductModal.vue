@@ -4,20 +4,10 @@
     <form @submit.prevent="handleSubmit" enctype="multipart/form-data">
 
       <!-- Название товара -->
-      <input
-        v-model="form.name"
-        type="text"
-        placeholder="Название товара"
-        required
-        class="input"
-      />
+      <input v-model="form.name" type="text" placeholder="Название товара" required class="input" />
 
       <!-- Описание -->
-      <textarea
-        v-model="form.description"
-        placeholder="Описание"
-        class="input"
-      ></textarea>
+      <textarea v-model="form.description" placeholder="Описание" class="input"></textarea>
 
       <!-- Пол -->
       <select v-model.number="form.sex" required class="input">
@@ -27,48 +17,25 @@
       </select>
 
       <!-- Цена -->
-      <input
-        v-model.number="form.price"
-        type="number"
-        placeholder="Цена"
-        min="0"
-        required
-        class="input"
-      />
+      <input v-model.number="form.price" type="number" placeholder="Цена" min="0" required class="input" />
 
       <!-- Категория -->
       <select v-model="form.category_id" required class="input">
         <option disabled value="">Выберите категорию</option>
-        <option
-          v-for="cat in categories"
-          :key="cat.id"
-          :value="cat.id"
-        >
-          {{ cat.name }}
-        </option>
+        <option v-for="cat in categories" :key="cat.id" :value="cat.id">{{ cat.name }}</option>
       </select>
 
       <!-- Страна -->
       <select v-model="form.country_id" required class="input">
         <option disabled value="">Выберите страну</option>
-        <option
-          v-for="country in countries"
-          :key="country.id"
-          :value="country.id"
-        >
-          {{ country.name }}
-        </option>
+        <option v-for="country in countries" :key="country.id" :value="country.id">{{ country.name }}</option>
       </select>
 
       <!-- Фото -->
       <input type="file" @change="handleFileChange" class="input" />
 
       <!-- Цвета и размеры -->
-      <div
-        v-for="(color, cIndex) in form.colors"
-        :key="cIndex"
-        style="border: 1px solid #ff85c1; margin: 15px 0; padding: 15px; border-radius: 16px;"
-      >
+      <div v-for="(color, cIndex) in form.colors" :key="cIndex" class="color-block">
         <div class="color-select-block">
           <!-- Переключатель между существующим и новым цветом -->
           <div class="color-type-toggle">
@@ -76,92 +43,81 @@
               type="button"
               :class="{active: !color.isNewColor}"
               @click="color.isNewColor = false"
-            >
-              Выбрать цвет
-            </button>
+              class="toggle-btn"
+            >Выбрать цвет</button>
             <button
               type="button"
               :class="{active: color.isNewColor}"
               @click="color.isNewColor = true"
-            >
-              Новый цвет
-            </button>
+              class="toggle-btn"
+            >Новый цвет</button>
           </div>
 
           <!-- Выбор существующего цвета -->
-          <select
-            v-if="!color.isNewColor"
-            v-model="color.color_id"
-            required
-            class="color-select input"
-          >
+          <select v-if="!color.isNewColor" v-model="color.color_id" required class="color-select input">
             <option disabled value="">Выберите цвет</option>
-            <option
-              v-for="c in availableColors"
-              :key="c.id"
-              :value="c.id"
-            >
-              {{ c.name }} ({{ c.hex }})
-            </option>
+            <option v-for="c in availableColors" :key="c.id" :value="c.id">{{ c.name }} ({{ c.hex }})</option>
           </select>
 
           <!-- Ввод нового цвета -->
           <div v-if="color.isNewColor" class="new-color-fields">
-            <input
-              v-model="color.new_color_name"
-              type="text"
-              placeholder="Название цвета"
-              required
-              class="input"
-            />
+            <input v-model="color.new_color_name" type="text" placeholder="Название цвета" required class="input" />
             <input
               v-model="color.new_color_hex"
               type="text"
               placeholder="#HEX код"
               required
-              class="input"
+              class="input hex-input"
               pattern="^#[0-9A-Fa-f]{6}$"
             />
           </div>
         </div>
 
         <!-- Размеры -->
-        <div
-          v-for="(size, sIndex) in color.sizes"
-          :key="sIndex"
-          class="size-block"
-        >
-          <select v-model="size.size_id" required class="size-select input">
+        <div v-for="(size, sIndex) in color.sizes" :key="sIndex" class="size-block">
+          <!-- Переключатель -->
+          <div class="size-type-toggle">
+            <button
+              type="button"
+              :class="{active: !size.isNewSize}"
+              @click="size.isNewSize = false"
+              class="toggle-btn small-btn"
+            >Выбрать размер</button>
+            <button
+              type="button"
+              :class="{active: size.isNewSize}"
+              @click="size.isNewSize = true"
+              class="toggle-btn small-btn"
+            >Новый размер</button>
+          </div>
+
+          <!-- Существующий размер -->
+          <select v-if="!size.isNewSize" v-model="size.size_id" required class="size-select input">
             <option disabled value="">Выберите размер</option>
-            <option
-              v-for="s in availableSizes"
-              :key="s.id"
-              :value="s.id"
-            >
-              {{ s.name }}
-            </option>
+            <option v-for="s in availableSizes" :key="s.id" :value="s.id">{{ s.name }}</option>
           </select>
 
+          <!-- Новый размер -->
           <input
-            type="number"
-            v-model.number="size.quantity"
-            min="1"
-            placeholder="Кол-во"
+            v-if="size.isNewSize"
+            v-model="size.new_size_name"
+            type="text"
+            placeholder="Новый размер"
             required
-            class="quantity-input"
+            class="size-input-new input"
           />
 
-          <button
-            @click.prevent="removeSize(cIndex, sIndex)"
-            title="Удалить размер"
-            class="btn-remove"
-          >
-            ×
-          </button>
+          <!-- Количество -->
+          <input type="number" v-model.number="size.quantity" min="1" placeholder="Кол-во" required class="quantity-input" />
+
+          <!-- Кнопка удаления размера -->
+          <button @click.prevent="removeSize(cIndex, sIndex)" title="Удалить размер" class="btn-remove">×</button>
         </div>
 
-        <button @click.prevent="addSize(cIndex)" class="add-size-btn">+ Размер</button>
-        <button @click.prevent="removeColor(cIndex)" class="btn-remove-color">Удалить цвет</button>
+        <div class="color-controls">
+          <button @click.prevent="addSize(cIndex)" class="add-size-btn">+ Размер</button>
+          <button @click.prevent="removeColor(cIndex)" class="btn-remove-color">Удалить цвет</button>
+        </div>
       </div>
 
       <button @click.prevent="addColor" class="add-color-btn">+ Добавить цвет</button>
@@ -180,6 +136,7 @@
 </template>
 
 <script setup>
+// ... (оставляем без изменений — из твоего исходника)
 import { reactive, ref, onMounted } from 'vue'
 import api from '@/services/api'
 
@@ -201,7 +158,6 @@ const categories = ref([])
 const countries = ref([])
 const availableColors = ref([])
 const availableSizes = ref([])
-
 
 onMounted(async () => {
   try {
@@ -226,13 +182,14 @@ onMounted(async () => {
 function handleFileChange(e) {
   form.photo = e.target.files[0]
 }
+
 function addColor() {
   form.colors.push({
-    isNewColor: false, // По умолчанию выбираем из существующих
+    isNewColor: false,
     color_id: '',
     new_color_name: '',
     new_color_hex: '',
-    sizes: [{ size_id: '', quantity: 1 }] // Добавляем один размер по умолчанию
+    sizes: [createSize()]
   })
 }
 
@@ -241,11 +198,20 @@ function removeColor(index) {
 }
 
 function addSize(colorIndex) {
-  form.colors[colorIndex].sizes.push({ size_id: '', quantity: 1 })
+  form.colors[colorIndex].sizes.push(createSize())
 }
 
 function removeSize(colorIndex, sizeIndex) {
   form.colors[colorIndex].sizes.splice(sizeIndex, 1)
+}
+
+function createSize() {
+  return {
+    isNewSize: false,
+    size_id: '',
+    new_size_name: '',
+    quantity: 1
+  }
 }
 
 function flattenErrors(errorObj, prefix = '', target = {}) {
@@ -274,7 +240,6 @@ async function handleSubmit() {
   formData.append('country_id', form.country_id)
   if (form.photo) formData.append('photo', form.photo)
 
-  // Обрабатываем цвета
   form.colors.forEach((color, cIndex) => {
     if (color.isNewColor) {
       formData.append(`colors[${cIndex}][new_color_name]`, color.new_color_name)
@@ -283,9 +248,12 @@ async function handleSubmit() {
       formData.append(`colors[${cIndex}][color_id]`, color.color_id)
     }
 
-    // Обрабатываем размеры
     color.sizes.forEach((size, sIndex) => {
-      formData.append(`colors[${cIndex}][sizes][${sIndex}][size_id]`, size.size_id)
+      if (size.isNewSize) {
+        formData.append(`colors[${cIndex}][sizes][${sIndex}][new_size_name]`, size.new_size_name)
+      } else {
+        formData.append(`colors[${cIndex}][sizes][${sIndex}][size_id]`, size.size_id)
+      }
       formData.append(`colors[${cIndex}][sizes][${sIndex}][quantity]`, size.quantity)
     })
   })
@@ -307,17 +275,18 @@ async function handleSubmit() {
 </script>
 
 <style scoped>
-/* Стили для ошибок и формы */
+/* Стили для ошибок */
 .error {
-  color: red;
+  color: #ff4d6d;
   font-size: 14px;
   margin: 2px 0 8px 0;
 }
 
 .general-error {
-  font-weight: bold;
+  font-weight: 700;
   text-align: center;
   margin-top: 20px;
+  color: #ff4d6d;
 }
 
 /* Контейнер формы */
@@ -351,63 +320,112 @@ async function handleSubmit() {
   border: 1px solid #ff85c1;
   color: #fff;
   font-size: 16px;
+  box-sizing: border-box;
 }
 
-/* Блок выбора цвета (селект + ввод нового + кнопка) */
+/* Блок с одним цветом */
+.color-block {
+  border: 1px solid #ff85c1;
+  margin: 15px 0;
+  padding: 20px 20px 15px 20px;
+  border-radius: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Блок переключателя (старый/новый цвет) и выбора цвета */
 .color-select-block {
   display: flex;
-  gap: 8px;
+  flex-wrap: wrap;
+  gap: 12px;
   align-items: center;
-  margin-bottom: 12px;
 }
 
-.color-select {
-  flex: 1 1 70%;
-}
-
-.input-new-color {
-  flex: 1 1 25%;
-}
-
-/* Кнопка добавления нового цвета */
-.btn-add-new-color {
-  flex: 0 0 30px;
-  background-color: #ff85c1;
-  border: none;
-  border-radius: 8px;
-  color: #1a1a2e;
-  font-weight: bold;
-  cursor: pointer;
-  font-size: 20px;
-  line-height: 18px;
-  transition: background-color 0.3s ease;
-}
-
-.btn-add-new-color:disabled {
-  background-color: #7a4d69;
-  cursor: default;
-}
-
-.btn-add-new-color:hover:not(:disabled) {
-  background-color: #c84b9e;
-}
-
-/* Блок размера (селект + ввод + кол-во + кнопка) */
-.size-block {
+/* Кнопки переключения выбора цвета */
+.color-type-toggle {
   display: flex;
   gap: 8px;
+  flex-shrink: 0;
+}
+
+.toggle-btn {
+  background-color: transparent;
+  border: 1.5px solid #ff85c1;
+  border-radius: 12px;
+  color: #ff85c1;
+  padding: 6px 14px;
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 14px;
+  transition: background-color 0.3s ease, color 0.3s ease;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.toggle-btn.active,
+.toggle-btn:hover {
+  background-color: #ff85c1;
+  color: #1a1a2e;
+}
+
+/* Выбор цвета занимает большую часть доступного места */
+.color-select {
+  flex: 1 1 60%;
+  min-width: 180px;
+}
+
+/* Блок для ввода нового цвета - растягивается */
+.new-color-fields {
+  display: flex;
+  gap: 12px;
+  flex: 1 1 60%;
+  min-width: 180px;
+}
+
+/* HEX поле поменьше */
+.hex-input {
+  max-width: 110px;
+}
+
+/* Блок с размерами */
+.size-block {
+  display: flex;
   align-items: center;
+  gap: 8px;
   margin-bottom: 10px;
+  flex-wrap: wrap;
 }
 
-/* Селект размера занимает 40% */
+/* Переключатель выбора размера */
+.size-type-toggle {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* Меньшие кнопки переключения для размера */
+.small-btn {
+  padding: 4px 10px;
+  font-size: 13px;
+  border-radius: 10px;
+}
+
+/* Размер селекта занимает около 35% */
 .size-select {
-  flex: 1 1 40%;
+  flex: 1 1 35%;
+  min-width: 120px;
 }
 
-/* Поле ввода количества */
+/* Новый размер (инпут) примерно такой же ширины */
+.size-input-new {
+  flex: 1 1 35%;
+  min-width: 120px;
+}
+
+/* Поле ввода количества узкое и центрированное */
 .quantity-input {
-  width: 60px;
+  width: 70px;
   text-align: center;
   border-radius: 12px;
   background-color: #2c2c44;
@@ -415,9 +433,11 @@ async function handleSubmit() {
   color: #fff;
   font-size: 16px;
   padding: 10px 6px;
+  flex-shrink: 0;
+  user-select: none;
 }
 
-/* Кнопка удаления размера - круглая и аккуратная */
+/* Кнопка удаления размера — круглая, справа от количества */
 .btn-remove {
   background-color: #ff385c;
   border: none;
@@ -432,72 +452,98 @@ async function handleSubmit() {
   font-size: 20px;
   user-select: none;
   transition: background-color 0.3s ease;
-  padding: 0;
+  flex-shrink: 0;
+  margin-left: 4px; /* Отступ слева от поля количества */
 }
 
 .btn-remove:hover {
   background-color: #c8324e;
 }
 
+/* Контейнер для кнопок добавления размера и удаления цвета — на одном уровне */
+.color-controls {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-start;
+  align-items: center;
+  margin-top: 10px;
+}
+
+/* Кнопка добавления размера */
+.add-size-btn {
+  padding: 8px 14px;
+  background-color: #ff85c1;
+  border: none;
+  border-radius: 12px;
+  color: #1a1a2e;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+  user-select: none;
+}
+
+.add-size-btn:hover {
+  background-color: #c84b9e;
+}
+
 /* Кнопка удаления цвета — более прямоугольная с небольшим скруглением */
 .btn-remove-color {
   background-color: #ff385c;
   border: none;
-  border-radius: 8px;
+  border-radius: 12px;
   color: #fff;
   font-weight: 900;
   cursor: pointer;
-  min-width: 60px;
-  height: 32px;
-  font-size: 18px;
-  line-height: 32px;
-  text-align: center;
+  padding: 8px 16px;
+  font-size: 16px;
   user-select: none;
   transition: background-color 0.3s ease;
-  padding: 0 12px;
+  /* Чтобы ровно стояла по вертикали */
+  align-self: center;
 }
 
 .btn-remove-color:hover {
   background-color: #c8324e;
 }
 
-/* Кнопки добавления размера и цвета */
-.add-size-btn,
+/* Кнопка добавления цвета */
 .add-color-btn {
-  margin-top: 10px;
-  padding: 8px 12px;
+  margin-top: 20px;
+  padding: 10px 18px;
   background-color: #ff85c1;
   border: none;
-  border-radius: 8px;
+  border-radius: 12px;
   color: #1a1a2e;
   font-weight: 700;
   cursor: pointer;
-  width: max-content;
   transition: background-color 0.3s ease;
+  user-select: none;
+  width: max-content;
 }
 
-.add-size-btn:hover,
 .add-color-btn:hover {
   background-color: #c84b9e;
 }
 
-/* Блок кнопок внизу */
+/* Нижние кнопки Создать и Отмена */
 .buttons {
   display: flex;
   justify-content: space-between;
-  margin-top: 25px;
+  margin-top: 30px;
 }
 
-/* Основные кнопки создания и отмены */
 .btn-submit,
 .btn-cancel {
-  padding: 12px 20px;
+  padding: 12px 26px;
   border-radius: 24px;
   font-weight: 700;
   font-size: 16px;
   cursor: pointer;
   border: none;
   transition: background-color 0.3s ease;
+  user-select: none;
+  min-width: 130px;
+  text-align: center;
 }
 
 .btn-submit {

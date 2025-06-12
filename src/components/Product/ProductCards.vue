@@ -17,12 +17,8 @@
         v-for="product in paginatedProducts"
         :key="product.id"
         class="product-card"
-        @click="goToProduct(product.id)"
       >
-        <div class="product-badge" v-if="product.discount">
-          -{{ product.discount }}%
-        </div>
-        <div class="product-image-container">
+        <div class="product-image-container" @click="goToProduct(product.id)">
           <img
             :src="getImageUrl(product.photo)"
             :alt="product.name"
@@ -30,16 +26,26 @@
             @error="handleImageError"
           />
         </div>
-        <div class="product-info">
+        <div class="product-info" @click="goToProduct(product.id)">
           <div class="product-meta">
             <span class="product-country">{{ product.country?.name }}</span>
             <span class="product-category">{{ product.category?.name }}</span>
           </div>
           <h3 class="product-name">{{ product.name }}</h3>
           <div class="product-price">
-            <span class="current-price">{{ formatPrice(calculatePrice(product)) }}</span>
+            <span class="current-price">{{ formatPrice(product.price) }}</span>
           </div>
         </div>
+
+        <!-- Кнопка редактирования, видна только админам и менеджерам -->
+        <button
+          v-if="isAdminOrManager"
+          class="edit-button"
+          @click.stop="openEditModal(product)"
+          type="button"
+        >
+          Редактировать
+        </button>
       </div>
     </div>
 
@@ -71,101 +77,91 @@
         &gt;
       </button>
     </div>
+
+    <!-- Модальное окно редактирования -->
+    <EditProductModal
+      v-if="showEditModal"
+      :productId="editingProductId"
+      @close="closeEditModal"
+      @updated="onProductUpdated"
+    />
   </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
-import api from "@/services/api";
+import api from '@/services/api';
+import { useStore } from 'vuex';
 
-const router = useRouter();
-const props = defineProps({
-  filters: {
-    type: Object,
-    default: () => ({})
-  },
-  searchQuery: {
-    type: String,
-    default: ''
-  }
-});
+// Импорт модального окна редактирования товара
+import EditProductModal from '../admin/EditProductModal.vue';
 
+// Переменные реактивные
 const products = ref([]);
 const loading = ref(false);
 const currentPage = ref(1);
-const totalProducts = ref(0);
 const itemsPerPage = 12;
 
+const showEditModal = ref(false);
+const editingProductId = ref(null);
+
+const router = useRouter();
+const store = useStore();
+
+// Роль пользователя из Vuex
+const userRole = computed(() => store.state.user?.role || null);
+const isAdminOrManager = computed(() => {
+  const role_id = Number(userRole.value);
+  return role_id === 1 || role_id === 2;
+});
+
+// Функция загрузки товаров (пример, можно адаптировать под свои фильтры)
 const fetchProducts = async () => {
   loading.value = true;
   try {
-    let response;
-
-    if (props.searchQuery) {
-      response = await api.get('/products/search', {
-        params: { q: props.searchQuery }
-      });
-      products.value = response.data.data || response.data;
-      totalProducts.value = response.data.count || products.value.length;
-    } else {
-      const params = {
-        ...props.filters,
-        page: currentPage.value,
-        per_page: itemsPerPage
-      };
-
-      Object.keys(params).forEach(key => {
-        if (params[key] === null || params[key] === undefined || params[key] === '') {
-          delete params[key];
-        }
-      });
-
-      response = await api.get('/products/filter', { params });
-      products.value = response.data.data || response.data;
-      totalProducts.value = response.data.count || products.value.length;
-    }
+    const response = await api.get('/products/filter', {
+      params: { page: currentPage.value, per_page: itemsPerPage }
+    });
+    products.value = response.data.data || response.data;
   } catch (error) {
     console.error('Ошибка при загрузке товаров:', error);
     products.value = [];
-    totalProducts.value = 0;
   } finally {
     loading.value = false;
   }
 };
 
 const totalPages = computed(() => Math.ceil(products.value.length / itemsPerPage));
-const paginatedProducts = computed(() => products.value.slice((currentPage.value - 1) * itemsPerPage, currentPage.value * itemsPerPage));
+const paginatedProducts = computed(() =>
+  products.value.slice((currentPage.value - 1) * itemsPerPage, currentPage.value * itemsPerPage)
+);
 
 const visiblePages = computed(() => {
   const pages = [];
   const maxVisible = 5;
   let start = Math.max(1, currentPage.value - Math.floor(maxVisible / 2));
   let end = Math.min(totalPages.value, start + maxVisible - 1);
-
   if (end - start + 1 < maxVisible) {
     start = Math.max(1, end - maxVisible + 1);
   }
-
   for (let i = start; i <= end; i++) {
     pages.push(i);
   }
-
   return pages;
 });
 
+// Переходы по страницам
 const goToPage = (page) => {
   currentPage.value = page;
   window.scrollTo({ top: 0, behavior: 'smooth' });
 };
-
 const prevPage = () => {
   if (currentPage.value > 1) {
     currentPage.value--;
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 };
-
 const nextPage = () => {
   if (currentPage.value < totalPages.value) {
     currentPage.value++;
@@ -173,16 +169,19 @@ const nextPage = () => {
   }
 };
 
+// Получение URL картинки товара
 const getImageUrl = (path) => {
   if (!path) return '/placeholder-product.jpg';
   if (path.startsWith('http')) return path;
   return `http://secrets-of-the-east.ru/storage/${path}`;
 };
 
+// Обработка ошибки загрузки изображения
 const handleImageError = (e) => {
   e.target.src = '/placeholder-product.jpg';
 };
 
+// Форматирование цены в рубли
 const formatPrice = (price) => {
   return new Intl.NumberFormat('ru-RU', {
     style: 'currency',
@@ -191,31 +190,38 @@ const formatPrice = (price) => {
   }).format(price);
 };
 
-const calculatePrice = (product) => {
-  return product.discount ? product.price * (1 - product.discount / 100) : product.price;
-};
-
+// Переход на страницу просмотра товара
 const goToProduct = (id) => {
   router.push(`/product/${id}`);
 };
 
-watch(() => props.filters, () => {
-  currentPage.value = 1;
-  fetchProducts();
-}, { deep: true });
+// Открытие модального окна с передачей только ID товара
+const openEditModal = (product) => {
+  editingProductId.value = product.id; // передаем только id
+  showEditModal.value = true;
+};
 
-watch(() => props.searchQuery, () => {
-  currentPage.value = 1;
-  fetchProducts();
-});
+// Закрытие модального окна
+const closeEditModal = () => {
+  showEditModal.value = false;
+  editingProductId.value = null;
+};
 
+// После успешного обновления товара обновляем список
+const onProductUpdated = () => {
+  closeEditModal();
+  fetchProducts();
+};
+
+// Загрузка товаров при монтировании
 onMounted(() => {
   fetchProducts();
 });
 </script>
 
+
 <style scoped>
-/* Контейнер с товарами */
+/* Стили оставляем ваши из примера */
 .products-container {
   position: relative;
   min-height: 500px;
@@ -225,7 +231,6 @@ onMounted(() => {
   border-radius: 16px;
 }
 
-/* Сетка товаров */
 .products-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
@@ -233,7 +238,6 @@ onMounted(() => {
   padding: 20px 0;
 }
 
-/* Карточка товара */
 .product-card {
   background: linear-gradient(135deg, #2a2a40 0%, #1e1e32 100%);
   border-radius: 16px;
@@ -253,22 +257,6 @@ onMounted(() => {
   border-color: rgba(255, 133, 193, 0.2);
 }
 
-/* Бейдж скидки */
-.product-badge {
-  position: absolute;
-  top: 15px;
-  right: 15px;
-  background: linear-gradient(135deg, #ff5e62, #ff9966);
-  color: white;
-  padding: 5px 10px;
-  border-radius: 20px;
-  font-size: 12px;
-  font-weight: 600;
-  z-index: 2;
-  box-shadow: 0 2px 8px rgba(255, 94, 98, 0.3);
-}
-
-/* Контейнер изображения */
 .product-image-container {
   position: relative;
   height: 300px;
@@ -286,7 +274,6 @@ onMounted(() => {
   transform: scale(1.05);
 }
 
-/* Информация о товаре */
 .product-info {
   padding: 18px;
   display: flex;
@@ -337,13 +324,27 @@ onMounted(() => {
   color: #ff85c1;
 }
 
-.old-price {
-  font-size: 14px;
-  color: #999;
-  text-decoration: line-through;
+.edit-button {
+  position: absolute;
+  bottom: 15px;
+  right: 15px;
+  background: #ff85c1;
+  color: #1a1a2e;
+  border: none;
+  border-radius: 10px;
+  padding: 8px 16px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(255, 133, 193, 0.4);
+  transition: background-color 0.3s ease;
+  user-select: none;
+  z-index: 5;
 }
 
-/* Пагинация */
+.edit-button:hover {
+  background: #e263a6;
+}
+
 .pagination {
   display: flex;
   justify-content: center;
@@ -381,7 +382,6 @@ onMounted(() => {
   cursor: not-allowed;
 }
 
-/* Загрузка */
 .loading-overlay {
   position: absolute;
   top: 0;
@@ -412,7 +412,6 @@ onMounted(() => {
   }
 }
 
-/* Нет товаров */
 .no-products {
   text-align: center;
   padding: 50px 20px;
@@ -429,7 +428,6 @@ onMounted(() => {
   color: #aaa;
 }
 
-/* Адаптивность */
 @media (max-width: 1200px) {
   .products-grid {
     grid-template-columns: repeat(3, 1fr);
