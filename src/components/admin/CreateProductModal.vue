@@ -275,89 +275,91 @@ async function handleSubmit() {
 </script>
 
 <style scoped>
-/* Стили для ошибок */
+/* Основной фон и оформление формы */
+.product-create-form {
+  max-width: 720px;
+  max-height: 90vh;
+  overflow-y: auto;
+  background-color: #1a1a2e; /* Темный фон для контраста */
+  padding: 30px 40px;
+  border-radius: 24px;
+  color: #fff;
+  box-shadow: 0 0 25px #c84b9e88; /* Розоватая тень */
+  display: flex;
+  flex-direction: column;
+}
+
+/* Заголовок */
+.title {
+  font-size: 30px;
+  font-weight: 700;
+  color: #ff85c1;
+  margin-bottom: 30px;
+}
+
+/* Инпуты и селекты */
+.input {
+  width: 100%;
+  margin-bottom: 16px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background-color: #2c2c44;
+  border: 1.5px solid #ff85c1;
+  color: #fff;
+  font-size: 17px;
+  box-sizing: border-box;
+  transition: border-color 0.3s;
+}
+
+.input:focus {
+  border-color: #ff4d6d;
+  outline: none;
+}
+
+/* Ошибки */
 .error {
   color: #ff4d6d;
   font-size: 14px;
-  margin: 2px 0 8px 0;
+  margin-top: -10px;
+  margin-bottom: 12px;
 }
 
-.general-error {
-  font-weight: 700;
-  text-align: center;
-  margin-top: 20px;
-  color: #ff4d6d;
-}
-
-/* Контейнер формы */
-.product-create-form {
-  max-width: 700px;
-  max-height: 90vh;
-  overflow-y: auto;
-  background-color: #1a1a2e;
-  padding: 30px;
-  border-radius: 24px;
-  color: #fff;
-  box-shadow: 0 0 20px #c84b9e88;
-  display: flex;
-  flex-direction: column;
-}
-
-.title {
-  font-size: 28px;
-  font-weight: 700;
-  color: #ff85c1;
-  margin-bottom: 20px;
-}
-
-/* Общие стили для инпутов и селектов */
-.input {
-  width: 100%;
-  margin-bottom: 15px;
-  padding: 10px 12px;
-  border-radius: 12px;
-  background-color: #2c2c44;
-  border: 1px solid #ff85c1;
-  color: #fff;
-  font-size: 16px;
-  box-sizing: border-box;
-}
-
-/* Блок с одним цветом */
+/* Контейнер для одного цвета с размерами */
 .color-block {
-  border: 1px solid #ff85c1;
-  margin: 15px 0;
-  padding: 20px 20px 15px 20px;
-  border-radius: 16px;
+  border: 1.5px solid #ff85c1;
+  margin: 20px 0;
+  padding: 22px 25px 18px 25px;
+  border-radius: 18px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 14px;
+  background-color: #241c3a;
 }
 
-/* Блок переключателя (старый/новый цвет) и выбора цвета */
+/* Блок переключения типа цвета (старый/новый) и выбора цвета */
 .color-select-block {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
+  gap: 14px;
   align-items: center;
 }
 
 /* Кнопки переключения выбора цвета */
 .color-type-toggle {
   display: flex;
-  gap: 8px;
+  gap: 10px;
   flex-shrink: 0;
 }
 
 .toggle-btn {
   background-color: transparent;
-  border: 1.5px solid #ff85c1;
-  border-radius: 12px;
+  border: 1.8px solid #ff85c1;
+  border-radius: 14px;
   color: #ff85c1;
-  padding: 6px 14px;
+  padding: 7px 18px;
   cursor: pointer;
   font-weight: 700;
-  font-size: 14px;
+  font-size: 15px;
   transition: background-color 0.3s ease, color 0.3s ease;
   user-select: none;
   white-space: nowrap;
@@ -369,75 +371,73 @@ async function handleSubmit() {
   color: #1a1a2e;
 }
 
-/* Выбор цвета занимает большую часть доступного места */
+/* Селект выбора существующего цвета */
 .color-select {
-  flex: 1 1 60%;
-  min-width: 180px;
+  flex: 1 1 65%;
+  min-width: 220px;
 }
 
-/* Блок для ввода нового цвета - растягивается */
+/* Новые цветовые поля (название + HEX) */
 .new-color-fields {
   display: flex;
-  gap: 12px;
-  flex: 1 1 60%;
-  min-width: 180px;
+  gap: 16px;
+  flex: 1 1 65%;
+  min-width: 220px;
 }
 
-/* HEX поле поменьше */
 .hex-input {
-  max-width: 110px;
+  max-width: 120px;
 }
 
-/* Блок с размерами */
+/* Блок с одним размером и количеством */
 .size-block {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 10px;
+  gap: 12px;
   flex-wrap: wrap;
+  margin-bottom: 12px;
 }
 
-/* Переключатель выбора размера */
+/* Переключение типа размера (старый/новый) */
 .size-type-toggle {
   display: flex;
-  gap: 8px;
+  gap: 12px;
   flex-shrink: 0;
 }
 
-/* Меньшие кнопки переключения для размера */
 .small-btn {
-  padding: 4px 10px;
-  font-size: 13px;
-  border-radius: 10px;
+  padding: 5px 12px;
+  font-size: 14px;
+  border-radius: 12px;
 }
 
-/* Размер селекта занимает около 35% */
+/* Выбор размера */
 .size-select {
   flex: 1 1 35%;
-  min-width: 120px;
+  min-width: 130px;
 }
 
-/* Новый размер (инпут) примерно такой же ширины */
+/* Новый размер (текстовое поле) */
 .size-input-new {
   flex: 1 1 35%;
-  min-width: 120px;
+  min-width: 130px;
 }
 
-/* Поле ввода количества узкое и центрированное */
+/* Поле количества */
 .quantity-input {
-  width: 70px;
+  width: 75px;
   text-align: center;
-  border-radius: 12px;
+  border-radius: 14px;
   background-color: #2c2c44;
-  border: 1px solid #ff85c1;
+  border: 1.5px solid #ff85c1;
   color: #fff;
-  font-size: 16px;
-  padding: 10px 6px;
-  flex-shrink: 0;
+  font-size: 17px;
+  padding: 12px 8px;
   user-select: none;
+  flex-shrink: 0;
 }
 
-/* Кнопка удаления размера — круглая, справа от количества */
+/* Кнопка удаления размера */
 .btn-remove {
   background-color: #ff385c;
   border: none;
@@ -445,36 +445,36 @@ async function handleSubmit() {
   color: #fff;
   font-weight: 900;
   cursor: pointer;
-  width: 28px;
-  height: 28px;
-  line-height: 28px;
+  width: 30px;
+  height: 30px;
+  line-height: 30px;
   text-align: center;
-  font-size: 20px;
+  font-size: 22px;
   user-select: none;
   transition: background-color 0.3s ease;
   flex-shrink: 0;
-  margin-left: 4px; /* Отступ слева от поля количества */
+  margin-left: 6px;
 }
 
 .btn-remove:hover {
   background-color: #c8324e;
 }
 
-/* Контейнер для кнопок добавления размера и удаления цвета — на одном уровне */
+/* Блок управления цветом (добавить размер, удалить цвет) */
 .color-controls {
   display: flex;
-  gap: 12px;
+  gap: 14px;
   justify-content: flex-start;
   align-items: center;
-  margin-top: 10px;
+  margin-top: 14px;
 }
 
-/* Кнопка добавления размера */
+/* Кнопка добавить размер */
 .add-size-btn {
-  padding: 8px 14px;
+  padding: 9px 18px;
   background-color: #ff85c1;
   border: none;
-  border-radius: 12px;
+  border-radius: 16px;
   color: #1a1a2e;
   font-weight: 700;
   cursor: pointer;
@@ -486,19 +486,18 @@ async function handleSubmit() {
   background-color: #c84b9e;
 }
 
-/* Кнопка удаления цвета — более прямоугольная с небольшим скруглением */
+/* Кнопка удалить цвет */
 .btn-remove-color {
   background-color: #ff385c;
   border: none;
-  border-radius: 12px;
+  border-radius: 16px;
   color: #fff;
   font-weight: 900;
   cursor: pointer;
-  padding: 8px 16px;
-  font-size: 16px;
+  padding: 10px 20px;
+  font-size: 17px;
   user-select: none;
   transition: background-color 0.3s ease;
-  /* Чтобы ровно стояла по вертикали */
   align-self: center;
 }
 
@@ -506,13 +505,13 @@ async function handleSubmit() {
   background-color: #c8324e;
 }
 
-/* Кнопка добавления цвета */
+/* Кнопка добавить цвет */
 .add-color-btn {
-  margin-top: 20px;
-  padding: 10px 18px;
+  margin-top: 28px;
+  padding: 12px 24px;
   background-color: #ff85c1;
   border: none;
-  border-radius: 12px;
+  border-radius: 20px;
   color: #1a1a2e;
   font-weight: 700;
   cursor: pointer;
@@ -525,24 +524,24 @@ async function handleSubmit() {
   background-color: #c84b9e;
 }
 
-/* Нижние кнопки Создать и Отмена */
+/* Нижний блок с кнопками отправки и отмены */
 .buttons {
   display: flex;
   justify-content: space-between;
-  margin-top: 30px;
+  margin-top: 40px;
 }
 
 .btn-submit,
 .btn-cancel {
-  padding: 12px 26px;
-  border-radius: 24px;
+  padding: 14px 32px;
+  border-radius: 30px;
   font-weight: 700;
-  font-size: 16px;
+  font-size: 17px;
   cursor: pointer;
   border: none;
   transition: background-color 0.3s ease;
   user-select: none;
-  min-width: 130px;
+  min-width: 140px;
   text-align: center;
 }
 
@@ -565,4 +564,5 @@ async function handleSubmit() {
   background-color: #ff85c1;
   color: #1a1a2e;
 }
+
 </style>

@@ -1,128 +1,146 @@
 <template>
   <div class="modal-overlay" @click.self="close">
     <div class="modal-content">
+      <!-- Кнопка закрытия модального окна -->
       <button class="close-button" @click="close">×</button>
 
       <h2>Редактирование товара</h2>
 
+      <!-- Статусы загрузки и ошибок -->
       <div v-if="loading">Загрузка товара...</div>
       <div v-else-if="error" class="error-message">{{ error }}</div>
       <div v-else>
-        <form @submit.prevent="submitForm">
+        <!-- Контейнер с прокруткой для формы -->
+        <div class="modal-scrollable-content">
+          <form @submit.prevent="submitForm">
 
-          <!-- Основные поля товара -->
-          <label>
-            Название:
-            <input type="text" v-model="form.name" required />
-          </label>
+            <!-- Основные поля товара -->
+            <label>
+              Название:
+              <input type="text" v-model="form.name" required />
+            </label>
 
-          <label>
-            Описание:
-            <textarea v-model="form.description" rows="3"></textarea>
-          </label>
+            <label>
+              Описание:
+              <textarea v-model="form.description" rows="3"></textarea>
+            </label>
 
-          <label>
-            Цена:
-            <input type="number" v-model.number="form.price" min="0" required />
-          </label>
+            <label>
+              Цена:
+              <input type="number" v-model.number="form.price" min="0" required />
+            </label>
 
-          <label>
-            Количество на складе (общее):
-            <input type="number" v-model.number="form.quantity" min="0" />
-          </label>
+            <label>
+              Количество на складе (общее):
+              <input type="number" v-model.number="form.quantity" min="0" />
+            </label>
 
-          <label>
-            Пол (sex):
-            <select v-model.number="form.sex">
-              <option :value="0">Не указан</option>
-              <option :value="1">Мужской</option>
-              <option :value="2">Женский</option>
-            </select>
-          </label>
+            <label>
+              Пол (sex):
+              <select v-model.number="form.sex">
+                <option :value="0">Не указан</option>
+                <option :value="1">Мужской</option>
+                <option :value="2">Женский</option>
+              </select>
+            </label>
 
-          <!-- Категория -->
-          <label>
-            Категория:
-            <select v-model.number="form.category_id" required>
-              <option v-for="cat in categories" :key="cat.id" :value="cat.id">
-                {{ cat.name }}
-              </option>
-            </select>
-          </label>
+            <!-- Категория -->
+            <label>
+              Категория:
+              <select v-model.number="form.category_id" required>
+                <option v-for="cat in categories" :key="cat.id" :value="cat.id">
+                  {{ cat.name }}
+                </option>
+              </select>
+            </label>
 
-          <!-- Страна -->
-          <label>
-            Страна:
-            <select v-model.number="form.country_id" required>
-              <option v-for="country in countries" :key="country.id" :value="country.id">
-                {{ country.name }}
-              </option>
-            </select>
-          </label>
+            <!-- Страна -->
+            <label>
+              Страна:
+              <select v-model.number="form.country_id" required>
+                <option v-for="country in countries" :key="country.id" :value="country.id">
+                  {{ country.name }}
+                </option>
+              </select>
+            </label>
 
-          <hr />
+            <hr />
 
-          <!-- Редактирование остатков по цветам и размерам -->
-          <h3>Цвета и размеры (остатки)</h3>
+            <!-- Редактирование остатков по цветам и размерам -->
+            <h3>Цвета и размеры (остатки)</h3>
 
-          <div v-for="(pcs, index) in form.product_color_sizes" :key="pcs.id" class="color-size-row">
-            <select v-model.number="pcs.color_id" required>
-              <option v-for="color in colors" :key="color.id" :value="color.id">
-                {{ color.name }}
-              </option>
-            </select>
+            <div
+              v-for="(pcs, index) in form.product_color_sizes"
+              :key="pcs.id || index"
+              class="color-size-row"
+            >
+              <select v-model.number="pcs.color_id" required>
+                <option v-for="color in colors" :key="color.id" :value="color.id">
+                  {{ color.name }}
+                </option>
+              </select>
 
-            <select v-model.number="pcs.size_id" required>
-              <option v-for="size in sizes" :key="size.id" :value="size.id">
-                {{ size.name }}
-              </option>
-            </select>
+              <select v-model.number="pcs.size_id" required>
+                <option v-for="size in sizes" :key="size.id" :value="size.id">
+                  {{ size.name }}
+                </option>
+              </select>
 
-            <input type="number" v-model.number="pcs.quantity" min="0" />
+              <input type="number" v-model.number="pcs.quantity" min="0" />
 
-            <button type="button" @click="removeColorSize(index)">Удалить</button>
-          </div>
+              <button type="button" @click="removeColorSize(index)">Удалить</button>
+            </div>
 
-          <button type="button" @click="addColorSize">Добавить цвет и размер</button>
+            <!-- Кнопка добавления новой пары цвет+размер с улучшенным стилем -->
+            <button
+              type="button"
+              class="add-color-size-btn"
+              @click="addColorSize"
+            >
+              Добавить цвет и размер
+            </button>
 
-          <hr />
+            <hr />
 
-          <button type="submit" :disabled="loadingSubmit">
-            {{ loadingSubmit ? 'Сохраняем...' : 'Сохранить' }}
-          </button>
+            <!-- Кнопка сохранения с индикацией загрузки -->
+            <button type="submit" :disabled="loadingSubmit">
+              {{ loadingSubmit ? 'Сохраняем...' : 'Сохранить' }}
+            </button>
 
-        </form>
+          </form>
+        </div>
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, watch, onMounted } from 'vue';
+import {ref, watch, onMounted} from 'vue';
 import api from '@/services/api';
 
-// Принимаем productId в пропсах
+// Пропсы — id товара для редактирования
 const props = defineProps({
   productId: {
     type: [Number, String],
     required: true
   }
 });
+
+// События для закрытия модалки и обновления списка
 const emits = defineEmits(['close', 'updated']);
 
-// Состояния загрузки, ошибок и данных
+// Состояния загрузки и ошибок
 const loading = ref(false);
 const loadingSubmit = ref(false);
 const error = ref(null);
-const product = ref(null);
 
-// Данные для селектов категорий, стран, цветов, размеров — нужно загрузить из API отдельно или передать из родителя
+// Справочные данные
 const categories = ref([]);
 const countries = ref([]);
 const colors = ref([]);
 const sizes = ref([]);
 
-// Форма редактирования, по умолчанию пустая структура с нужными полями
+// Данные формы
 const form = ref({
   name: '',
   description: '',
@@ -134,47 +152,44 @@ const form = ref({
   product_color_sizes: []
 });
 
-// Функция для загрузки справочных данных (категорий, стран, цветов и размеров)
+// Загрузка справочных данных (категории, страны, цвета, размеры)
 async function loadReferenceData() {
   try {
-    // Запрашиваем все справочные данные параллельно
     const [catRes, countryRes, colorRes, sizeRes] = await Promise.all([
-      api.get('/category'),  // путь для категорий
-      api.get('/country'),   // путь для стран
-      api.get('/colors'),    // путь для цветов
-      api.get('/sizes'),     // путь для размеров
+      api.get('/category'),
+      api.get('/country'),
+      api.get('/colors'),
+      api.get('/sizes'),
     ]);
-    // Записываем полученные данные в реактивные переменные
     categories.value = catRes.data;
     countries.value = countryRes.data;
     colors.value = colorRes.data;
     sizes.value = sizeRes.data;
   } catch (e) {
-    // Логируем ошибку загрузки справочных данных
     console.error('Ошибка загрузки справочных данных:', e);
     error.value = 'Ошибка загрузки справочных данных';
   }
 }
 
-// Загрузка данных товара по id
+// Загрузка данных товара по ID
 async function fetchProduct(id) {
   loading.value = true;
   error.value = null;
   try {
     const response = await api.get(`/product/${id}`);
-    product.value = response.data;
+    const product = response.data;
 
-    // Копируем данные в форму
-    form.value.name = product.value.name || '';
-    form.value.description = product.value.description || '';
-    form.value.price = Number(product.value.price) || 0;
-    form.value.quantity = product.value.quantity || 0;
-    form.value.sex = product.value.sex || 0;
-    form.value.category_id = product.value.category_id || null;
-    form.value.country_id = product.value.country_id || null;
+    // Заполняем форму данными товара
+    form.value.name = product.name || '';
+    form.value.description = product.description || '';
+    form.value.price = Number(product.price) || 0;
+    form.value.quantity = product.quantity || 0;
+    form.value.sex = product.sex || 0;
+    form.value.category_id = product.category_id || null;
+    form.value.country_id = product.country_id || null;
 
-    // Копируем массив product_color_sizes, если есть
-    form.value.product_color_sizes = (product.value.product_color_sizes || []).map(pcs => ({
+    // Копируем массив product_color_sizes для редактирования
+    form.value.product_color_sizes = (product.product_color_sizes || []).map(pcs => ({
       id: pcs.id,
       color_id: pcs.color_id,
       size_id: pcs.size_id,
@@ -188,19 +203,19 @@ async function fetchProduct(id) {
   }
 }
 
-// Следим за изменением productId, чтобы загрузить новый товар
-watch(() => props.productId, (newId) => {
-  if (newId) {
-    fetchProduct(newId);
+// Перезагружаем данные при изменении productId
+watch(() => props.productId, (id) => {
+  if (id) {
+    fetchProduct(id);
   }
-}, { immediate: true });
+}, {immediate: true});
 
-// Загрузка справочных данных при монтировании компонента
+// Загружаем справочные данные при монтировании компонента
 onMounted(() => {
   loadReferenceData();
 });
 
-// Добавить новый блок цвет+размер+кол-во
+// Добавить новую пару цвет + размер
 function addColorSize() {
   form.value.product_color_sizes.push({
     id: null,
@@ -210,24 +225,22 @@ function addColorSize() {
   });
 }
 
-// Удалить блок по индексу
+// Удалить пару по индексу
 function removeColorSize(index) {
   form.value.product_color_sizes.splice(index, 1);
 }
 
-// Закрытие модалки
+// Закрыть модальное окно
 function close() {
   emits('close');
 }
 
-// Отправка данных на сервер
+// Отправить обновленные данные на сервер
 async function submitForm() {
   loadingSubmit.value = true;
   error.value = null;
-
   try {
-    // Отправляем обновлённые данные на сервер
-    await api.put(`/product/${props.productId}`, form.value);
+    await api.patch(`/product/${props.productId}`, form.value);
     emits('updated'); // Уведомляем родителя об обновлении
     close(); // Закрываем модалку
   } catch (e) {
@@ -240,9 +253,13 @@ async function submitForm() {
 </script>
 
 <style scoped>
+/* Фон и центрирование модального окна */
 .modal-overlay {
   position: fixed;
-  top: 0; left: 0; right: 0; bottom: 0;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
   background: rgba(26, 26, 46, 0.9);
   display: flex;
   justify-content: center;
@@ -250,6 +267,7 @@ async function submitForm() {
   z-index: 1000;
 }
 
+/* Само модальное окно */
 .modal-content {
   background: #1a1a2e;
   padding: 20px;
@@ -257,11 +275,22 @@ async function submitForm() {
   width: 500px;
   max-width: 95%;
   position: relative;
-  max-height: 90vh;
-  overflow-y: auto;
+  max-height: 90vh; /* ограничение высоты окна */
   color: #fff;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  /* Убираем overflow здесь, чтобы прокрутка была внутри вложенного контейнера */
+  /* overflow-y: auto; */
 }
 
+/* Контейнер с прокруткой для формы */
+.modal-scrollable-content {
+  max-height: 70vh; /* ограничиваем высоту формы */
+  overflow-y: auto; /* вертикальная прокрутка */
+  padding-right: 10px; /* чтобы скролл не перекрывал контент */
+  margin-bottom: 10px;
+}
+
+/* Кнопка закрытия модального окна */
 .close-button {
   position: absolute;
   top: 10px;
@@ -273,17 +302,21 @@ async function submitForm() {
   cursor: pointer;
   transition: color 0.3s ease;
 }
+
 .close-button:hover {
   color: #ff4da6;
 }
 
+/* Метки полей */
 label {
   display: block;
   margin-bottom: 12px;
   font-weight: 600;
   color: #f0c6f7;
+  font-size: 14px;
 }
 
+/* Общие стили для input, textarea и select */
 input[type="text"],
 input[type="number"],
 textarea,
@@ -297,6 +330,7 @@ select {
   background: #2c2c4a;
   color: #fff;
   font-weight: 500;
+  font-size: 14px;
   transition: border-color 0.3s ease;
 }
 
@@ -309,6 +343,7 @@ select:focus {
   background: #3a2c5a;
 }
 
+/* Кнопка сохранения */
 button[type="submit"] {
   background: #ff85c1;
   border: none;
@@ -331,6 +366,7 @@ button[type="submit"]:disabled {
   cursor: default;
 }
 
+/* Строка с выбором цвета и размера */
 .color-size-row {
   display: flex;
   gap: 10px;
@@ -347,6 +383,7 @@ button[type="submit"]:disabled {
   color: #fff;
   font-weight: 500;
   padding: 6px 10px;
+  font-size: 14px;
   transition: border-color 0.3s ease;
 }
 
@@ -357,6 +394,7 @@ button[type="submit"]:disabled {
   background: #3a2c5a;
 }
 
+/* Кнопка удаления пары цвет+размер */
 .color-size-row button {
   flex: 0 0 auto;
   padding: 6px 12px;
@@ -366,6 +404,7 @@ button[type="submit"]:disabled {
   cursor: pointer;
   font-weight: 700;
   color: #1a1a2e;
+  font-size: 14px;
   transition: background-color 0.3s ease;
 }
 
@@ -373,9 +412,29 @@ button[type="submit"]:disabled {
   background: #ff4da6;
 }
 
+/* Кнопка "Добавить цвет и размер" */
+.add-color-size-btn {
+  background: #7f5fc5;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 15px;
+  color: white;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  margin-bottom: 15px;
+  transition: background-color 0.3s ease;
+}
+
+.add-color-size-btn:hover {
+  background: #9e7edc;
+}
+
+/* Сообщение об ошибке */
 .error-message {
   color: #ff4da6;
   margin-bottom: 15px;
   font-weight: 700;
+  font-size: 14px;
 }
 </style>
