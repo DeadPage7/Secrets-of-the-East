@@ -1,6 +1,6 @@
 <template>
   <div class="product-reviews">
-    <!-- Отзывы -->
+    <!-- Заголовок и список отзывов -->
     <div v-if="reviews.length">
       <h3 class="reviews-title">Отзывы</h3>
       <div class="reviews-container">
@@ -17,15 +17,23 @@
             </div>
           </div>
           <p class="review-text">{{ review.description }}</p>
+
+          <!-- Кнопка удаления видна админу, менеджеру или автору отзыва -->
+          <button
+            v-if="canDeleteReview(review)"
+            @click="deleteReview(review.id)"
+            class="delete-button"
+          >
+            Удалить
+          </button>
         </div>
       </div>
     </div>
-
     <div v-else>
       <p>Нет отзывов для этого товара.</p>
     </div>
 
-    <!-- Форма отзыва -->
+    <!-- Форма добавления отзыва -->
     <div v-if="isLoggedIn" class="review-form">
       <h3>Оставьте свой отзыв</h3>
       <form @submit.prevent="submitReview">
@@ -40,68 +48,64 @@
               @click="newReview.rating = star"
               role="button"
               tabindex="0"
-              @keydown.enter.prevent="newReview.rating = star"
-              aria-label="Оценить {{ star }} звёзд"
             >★</span>
           </div>
         </div>
+
         <div class="form-group">
           <label for="description">Комментарий:</label>
           <textarea
             v-model="newReview.description"
             id="description"
             rows="4"
-            placeholder="Напишите ваш отзыв здесь..."
             required
+            placeholder="Напишите ваш отзыв здесь..."
           ></textarea>
         </div>
 
-        <!-- Ошибка отображения -->
         <p v-if="errorMessage" class="error-message">{{ errorMessage }}</p>
-
         <button type="submit">Отправить отзыв</button>
       </form>
     </div>
 
-    <div v-else>
-      <p>Чтобы оставить отзыв, необходимо нажать на профиль и авторизоваться.</p>
+    <!-- Блок если пользователь не авторизован -->
+    <div v-else class="login-warning">
+      <p class="warning-text">Чтобы оставить отзыв, необходимо авторизоваться через профиль в шапке профиля.</p>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { useStore } from 'vuex';
 import { useRoute } from 'vue-router';
 import api from '@/services/api';
 
-// Получаем store и параметры роутера
 const store = useStore();
 const route = useRoute();
 const productId = route.params.id;
 
-// Данные отзывов и новой формы
 const reviews = ref([]);
 const newReview = ref({ rating: 0, description: '' });
-const errorMessage = ref(''); // Для отображения ошибок пользователю
+const errorMessage = ref('');
 
-// Проверка авторизации
 const isLoggedIn = computed(() => store.state.user.loggedIn);
+const currentUserEmail = computed(() => store.state.user.email);
+const userRole = computed(() => store.state.user.role);
 
-// Функция загрузки отзывов с сервера
+// Загрузка отзывов
 const fetchReviews = async () => {
   try {
     const response = await api.get(`/product/${productId}/review`);
     reviews.value = response.data;
   } catch (error) {
-    console.error('Ошибка при загрузке отзывов:', error);
+    console.error('Ошибка загрузки отзывов:', error);
   }
 };
 
 // Отправка нового отзыва
 const submitReview = async () => {
-  errorMessage.value = ''; // Сбрасываем ошибку
-
+  errorMessage.value = '';
   if (!newReview.value.rating || !newReview.value.description.trim()) {
     errorMessage.value = 'Пожалуйста, заполните оценку и комментарий.';
     return;
@@ -109,13 +113,12 @@ const submitReview = async () => {
 
   try {
     const response = await api.post(`/product/${productId}/review`, newReview.value);
-    reviews.value.push(response.data); // Добавляем новый отзыв в список
-    newReview.value = { rating: 0, description: '' }; // Очищаем форму
+    reviews.value.push(response.data);
+    newReview.value = { rating: 0, description: '' };
   } catch (error) {
-    if (error.response && error.response.data && error.response.data.message) {
+    if (error.response?.data?.message) {
       errorMessage.value = error.response.data.message;
-    } else if (error.response && error.response.data && typeof error.response.data === 'object') {
-      // Если Laravel вернул объект с validation errors
+    } else if (error.response?.data?.errors) {
       const messages = [];
       for (const key in error.response.data.errors) {
         messages.push(...error.response.data.errors[key]);
@@ -127,7 +130,23 @@ const submitReview = async () => {
   }
 };
 
-// Загружаем отзывы при загрузке компонента
+// Проверка, можно ли удалить отзыв
+const canDeleteReview = (review) => {
+  const isOwner = review.user?.email === currentUserEmail.value;
+  const isAdminOrManager = userRole.value === 1 || userRole.value === 2;
+  return isOwner || isAdminOrManager;
+};
+
+// Удаление отзыва
+const deleteReview = async (reviewId) => {
+  try {
+    await api.delete(`/product/${productId}/review/${reviewId}`);
+    reviews.value = reviews.value.filter((review) => review.id !== reviewId);
+  } catch (error) {
+    console.error('Ошибка при удалении отзыва:', error);
+  }
+};
+
 onMounted(fetchReviews);
 </script>
 
@@ -203,11 +222,10 @@ onMounted(fetchReviews);
 }
 
 .star.filled {
-  color: #ff85c1; /* Цвет под вашу палитру */
+  color: #ff85c1;
   text-shadow: 0 0 6px #ff85c180;
 }
 
-/* Форма для отзыва */
 .review-form {
   background: linear-gradient(to bottom right, #1a1a2f, #2a2a3f);
   padding: 30px 35px;
@@ -239,7 +257,6 @@ onMounted(fetchReviews);
   text-shadow: 0 0 4px #ff85c170;
 }
 
-/* Звёзды выбора рейтинга */
 .rating-group .rating-stars {
   user-select: none;
 }
@@ -303,12 +320,61 @@ onMounted(fetchReviews);
   box-shadow: 0 0 20px #c84b9ecc;
 }
 
-/* Ошибка */
+.delete-button {
+  margin-top: 10px;
+  background-color: #ff4d6d;
+  border: none;
+  color: white;
+  padding: 8px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: bold;
+  box-shadow: 0 0 10px #ff4d6d80;
+  transition: background-color 0.3s ease;
+}
+.delete-button:hover {
+  background-color: #cc0033;
+}
+
 .error-message {
   color: #ff6f91;
   font-weight: 600;
   margin-bottom: 15px;
   text-align: center;
   text-shadow: 0 0 6px #ff6f9160;
+}
+
+/* СТИЛИ ДЛЯ НЕАВТОРИЗОВАННОГО ПОЛЬЗОВАТЕЛЯ */
+.login-warning {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 200px;
+  background: linear-gradient(to right, #1a1a2f, #29293f);
+  border: 1px solid #ff85c130;
+  border-radius: 14px;
+  box-shadow: 0 0 20px #ff85c140;
+  margin-top: 40px;
+  text-align: center;
+  padding: 30px;
+  animation: fadeIn 0.6s ease-in-out;
+}
+
+.warning-text {
+  color: #ff85c1;
+  font-size: 18px;
+  font-weight: bold;
+  text-shadow: 0 0 10px #ff85c180;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(15px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 </style>
