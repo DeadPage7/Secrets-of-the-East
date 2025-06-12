@@ -9,6 +9,29 @@
       <div v-else>
         <div class="modal-scrollable-content">
           <form @submit.prevent="submitForm">
+            <!-- Блок с фотографией товара -->
+            <div class="image-upload-block">
+              <div class="current-image" v-if="form.photo">
+                <img :src="getImageUrl(form.photo)" :alt="form.name" class="product-image" />
+                <button type="button" @click="removePhoto" class="remove-photo-btn">Удалить фото</button>
+              </div>
+              <div v-else class="no-image">Фото товара отсутствует</div>
+
+              <div class="upload-controls">
+                <label class="upload-btn">
+                  {{ form.photo ? 'Изменить фото' : 'Добавить фото' }}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    @change="handleFileUpload"
+                    style="display: none;"
+                  />
+                </label>
+                <div v-if="uploadProgress > 0 && uploadProgress < 100" class="upload-progress">
+                  Загрузка: {{ uploadProgress }}%
+                </div>
+              </div>
+            </div>
 
             <!-- Основные поля формы -->
             <label>
@@ -187,7 +210,6 @@
 </template>
 
 <script setup>
-// Импорты и объявления, как у тебя
 import { ref, watch, computed, onMounted } from 'vue';
 import api from '@/services/api';
 
@@ -202,6 +224,7 @@ const emits = defineEmits(['close', 'updated']);
 const loading = ref(false);
 const loadingSubmit = ref(false);
 const error = ref(null);
+const uploadProgress = ref(0);
 
 const categories = ref([]);
 const countries = ref([]);
@@ -215,10 +238,17 @@ const form = ref({
   sex: 0,
   category_id: null,
   country_id: null,
+  photo: null,
   product_color_sizes: [],
 });
 
-// Загружаем справочные данные
+// Получение URL изображения
+const getImageUrl = (path) => {
+  if (!path) return '/placeholder-product.jpg';
+  return path.startsWith('http') ? path : `http://secrets-of-the-east.ru/storage/${path}`;
+};
+
+// Загрузка справочных данных
 async function loadReferenceData() {
   try {
     const [catRes, countryRes, colorRes, sizeRes] = await Promise.all([
@@ -237,7 +267,7 @@ async function loadReferenceData() {
   }
 }
 
-// Загружаем данные товара по ID
+// Загрузка данных товара
 async function fetchProduct(id) {
   loading.value = true;
   error.value = null;
@@ -245,24 +275,26 @@ async function fetchProduct(id) {
     const response = await api.get(`/product/${id}`);
     const product = response.data;
 
-    form.value.name = product.name || '';
-    form.value.description = product.description || '';
-    form.value.price = Number(product.price) || 0;
-    form.value.sex = product.sex || 0;
-    form.value.category_id = product.category_id || null;
-    form.value.country_id = product.country_id || null;
-
-    form.value.product_color_sizes = (product.product_color_sizes || []).map(pcs => ({
-      id: pcs.id,
-      color_id: pcs.color_id,
-      size_id: pcs.size_id,
-      quantity: pcs.quantity,
-      isNewColor: false,
-      new_color_name: '',
-      new_color_hex: '#000000',
-      isNewSize: false,
-      new_size_name: '',
-    }));
+    form.value = {
+      name: product.name || '',
+      description: product.description || '',
+      price: Number(product.price) || 0,
+      sex: product.sex || 0,
+      category_id: product.category_id || null,
+      country_id: product.country_id || null,
+      photo: product.photo || null,
+      product_color_sizes: (product.product_color_sizes || []).map(pcs => ({
+        id: pcs.id,
+        color_id: pcs.color_id,
+        size_id: pcs.size_id,
+        quantity: pcs.quantity,
+        isNewColor: false,
+        new_color_name: '',
+        new_color_hex: '#000000',
+        isNewSize: false,
+        new_size_name: '',
+      }))
+    };
   } catch (e) {
     error.value = 'Ошибка загрузки товара';
     console.error(e);
@@ -271,15 +303,54 @@ async function fetchProduct(id) {
   }
 }
 
-// Следим за сменой ID продукта
-watch(() => props.productId, (id) => {
-  if (id) fetchProduct(id);
-}, { immediate: true });
+// Обработка загрузки файла
+const handleFileUpload = async (event) => {
+  const file = event.target.files[0];
+  if (!file) return;
 
-// Загружаем справочные данные при монтировании
-onMounted(() => {
-  loadReferenceData();
-});
+  // Проверка типа файла
+  if (!file.type.match('image.*')) {
+    error.value = 'Пожалуйста, выберите файл изображения';
+    return;
+  }
+
+  // Проверка размера файла (например, не более 5MB)
+  if (file.size > 5 * 1024 * 1024) {
+    error.value = 'Файл слишком большой (максимум 5MB)';
+    return;
+  }
+
+  try {
+    uploadProgress.value = 0;
+
+    const formData = new FormData();
+    formData.append('photo', file);
+
+    const response = await api.post('/upload-photo', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      },
+      onUploadProgress: (progressEvent) => {
+        uploadProgress.value = Math.round(
+          (progressEvent.loaded * 100) / progressEvent.total
+        );
+      }
+    });
+
+    form.value.photo = response.data.path;
+    uploadProgress.value = 0;
+    error.value = '';
+  } catch (e) {
+    error.value = 'Ошибка загрузки изображения';
+    console.error(e);
+    uploadProgress.value = 0;
+  }
+};
+
+// Удаление фото
+const removePhoto = () => {
+  form.value.photo = null;
+};
 
 // Добавление новой пары цвет-размер
 function addColorSize() {
@@ -305,12 +376,12 @@ function close() {
   emits('close');
 }
 
-// Вычисляем общее количество по всем цветам и размерам
+// Общее количество товара
 const totalQuantity = computed(() => {
   return form.value.product_color_sizes.reduce((sum, pcs) => sum + (pcs.quantity || 0), 0);
 });
 
-// Отправка данных на сервер
+// Отправка формы
 async function submitForm() {
   loadingSubmit.value = true;
   error.value = null;
@@ -356,6 +427,7 @@ async function submitForm() {
       sex: form.value.sex,
       category_id: form.value.category_id,
       country_id: form.value.country_id,
+      photo: form.value.photo,
       colors: colorsGrouped,
     };
 
@@ -369,49 +441,20 @@ async function submitForm() {
     loadingSubmit.value = false;
   }
 }
+
+// Наблюдаем за изменением ID продукта
+watch(() => props.productId, (id) => {
+  if (id) fetchProduct(id);
+}, { immediate: true });
+
+// Загружаем справочные данные
+onMounted(() => {
+  loadReferenceData();
+});
 </script>
 
 <style scoped>
-.button-group {
-  display: flex;
-  gap: 6px;
-  flex: 1 1 100%;
-}
-
-.button-group button {
-  flex: 1;
-  padding: 8px 12px;
-  border: 1px solid #6a4b99;
-  background: #2c2c4a;
-  color: #ddd;
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 13px;
-  transition: all 0.3s ease;
-}
-
-.button-group button.active {
-  background: #7f5fc5;
-  color: white;
-  border-color: #7f5fc5;
-}
-
-.button-group button:hover {
-  background: #6a4b99;
-  color: white;
-}
-
-/* Кнопка удаления */
-.remove-btn {
-  background: #ff4d4d !important;
-  color: white !important;
-  border: none !important;
-}
-
-.remove-btn:hover {
-  background: #ff3333 !important;
-}
-/* Фон и центрирование модального окна */
+/* Общие стили модального окна */
 .modal-overlay {
   position: fixed;
   top: 0;
@@ -425,7 +468,6 @@ async function submitForm() {
   z-index: 1000;
 }
 
-/* Основное окно */
 .modal-content {
   background: #1a1a2e;
   padding: 20px 25px;
@@ -438,7 +480,6 @@ async function submitForm() {
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
-/* Прокручиваемая часть формы */
 .modal-scrollable-content {
   max-height: 70vh;
   overflow-y: auto;
@@ -446,7 +487,6 @@ async function submitForm() {
   margin-bottom: 10px;
 }
 
-/* Кнопка закрытия */
 .close-button {
   position: absolute;
   top: 10px;
@@ -462,7 +502,82 @@ async function submitForm() {
   color: #ff4da6;
 }
 
-/* Метки */
+/* Стили для блока с фотографией */
+.image-upload-block {
+  margin-bottom: 20px;
+  padding: 15px;
+  background: #29294a;
+  border-radius: 12px;
+}
+
+.current-image {
+  position: relative;
+  margin-bottom: 15px;
+  text-align: center;
+}
+
+.product-image {
+  max-width: 100%;
+  max-height: 300px;
+  border-radius: 8px;
+  display: block;
+  margin: 0 auto;
+  object-fit: contain;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+}
+
+.no-image {
+  padding: 20px;
+  text-align: center;
+  color: #aaa;
+  background: #2c2c4a;
+  border-radius: 8px;
+  margin-bottom: 15px;
+}
+
+.remove-photo-btn {
+  display: block;
+  margin: 10px auto 0;
+  padding: 6px 12px;
+  background: #ff4d4d;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+.remove-photo-btn:hover {
+  background: #ff3333;
+}
+
+.upload-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: center;
+}
+
+.upload-btn {
+  display: inline-block;
+  padding: 8px 16px;
+  background: #7f5fc5;
+  color: white;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.3s;
+  text-align: center;
+}
+.upload-btn:hover {
+  background: #9e7edc;
+}
+
+.upload-progress {
+  margin-top: 8px;
+  color: #ff85c1;
+  font-size: 14px;
+}
+
+/* Стили для формы */
 label {
   display: block;
   margin-bottom: 12px;
@@ -471,7 +586,6 @@ label {
   font-size: 14px;
 }
 
-/* Общие стили input, select, textarea */
 input[type="text"],
 input[type="number"],
 textarea,
@@ -497,7 +611,6 @@ select:focus {
   background: #3a2c5a;
 }
 
-/* Кнопка сохранения */
 button[type="submit"] {
   background: #ff85c1;
   border: none;
@@ -509,6 +622,7 @@ button[type="submit"] {
   font-size: 16px;
   margin-top: 15px;
   transition: background-color 0.3s ease;
+  width: 100%;
 }
 button[type="submit"]:hover:not(:disabled) {
   background: #ff4da6;
@@ -518,7 +632,7 @@ button[type="submit"]:disabled {
   cursor: default;
 }
 
-/* Блок с заголовком цветов и общим остатком */
+/* Стили для цветов и размеров */
 .colors-header {
   display: flex;
   justify-content: space-between;
@@ -531,7 +645,6 @@ button[type="submit"]:disabled {
   color: #ff85c1;
 }
 
-/* Строка выбора цвета и размера */
 .color-size-row {
   display: flex;
   flex-wrap: wrap;
@@ -543,27 +656,42 @@ button[type="submit"]:disabled {
   border-radius: 12px;
 }
 
-/* Группы радио кнопок */
-.radio-group {
+.button-group {
   display: flex;
-  gap: 12px;
+  gap: 6px;
   flex: 1 1 100%;
-  color: #ddd;
-  font-size: 13px;
 }
 
-/* Обертки для селектов и новых цветов */
+.button-group button {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid #6a4b99;
+  background: #2c2c4a;
+  color: #ddd;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  transition: all 0.3s ease;
+}
+.button-group button.active {
+  background: #7f5fc5;
+  color: white;
+  border-color: #7f5fc5;
+}
+.button-group button:hover {
+  background: #6a4b99;
+  color: white;
+}
+
 .select-wrapper,
 .new-color-inputs {
   flex: 1 1 120px;
 }
 
-/* Поля для нового цвета (текст + цвет) */
 .new-color-inputs input[type="text"] {
   margin-bottom: 6px;
 }
 
-/* Количество */
 .quantity-input {
   width: 80px;
   border-radius: 10px;
@@ -581,24 +709,15 @@ button[type="submit"]:disabled {
   background: #3a2c5a;
 }
 
-/* Кнопка удаления */
-.color-size-row button {
-  flex: 0 0 auto;
-  padding: 6px 12px;
-  background: #ff85c1;
-  border: none;
-  border-radius: 10px;
-  cursor: pointer;
-  font-weight: 700;
-  color: #1a1a2e;
-  font-size: 14px;
-  transition: background-color 0.3s ease;
+.remove-btn {
+  background: #ff4d4d !important;
+  color: white !important;
+  border: none !important;
 }
-.color-size-row button:hover {
-  background: #ff4da6;
+.remove-btn:hover {
+  background: #ff3333 !important;
 }
 
-/* Кнопка добавления пары цвет и размер (внизу) */
 .add-color-size-btn {
   background: #7f5fc5;
   border: none;
@@ -617,11 +736,17 @@ button[type="submit"]:disabled {
   background: #9e7edc;
 }
 
-/* Ошибка */
 .error-message {
   color: #ff4da6;
   margin-bottom: 15px;
   font-weight: 700;
   font-size: 14px;
+}
+
+hr {
+  border: none;
+  height: 1px;
+  background-color: #3a3a5a;
+  margin: 20px 0;
 }
 </style>
