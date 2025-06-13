@@ -1,29 +1,32 @@
 <template>
   <header class="header">
+    <!-- Основная навигационная панель -->
     <div class="nav-bar">
+      <!-- Левый блок: название магазина, переход на главную -->
       <div class="nav-left">
         <a href="#" class="store-name" @click.prevent="goHome">Тайны Востока</a>
       </div>
 
+      <!-- Центр: навигационные ссылки и кнопка администратора -->
       <div class="nav-center">
         <a href="#" class="nav-link" @click.prevent="showDeliveryPoints">Пункт выдачи</a>
         <a href="#" class="nav-link" @click.prevent="goToCart">Корзина</a>
         <a href="#" class="nav-link" @click.prevent="handleProfileClick">Профиль</a>
         <a href="#" class="nav-link" @click.prevent="openOrdersModal">Заказы</a>
 
+        <!-- Кнопка для доступа к панели администратора -->
         <button
           v-if="isAdmin"
           class="nav-link secret-button"
           @click="handleSecretClick"
           title="Инструменты"
-          aria-label="Инструменты"
-          type="button"
         >
           <img src="@/assets/icons/gear-white.svg" alt="Инструменты" class="icon-default" />
           <img src="@/assets/icons/gear-pink.svg" alt="Инструменты" class="icon-hover" />
         </button>
       </div>
 
+      <!-- Правый блок: строка поиска -->
       <div class="nav-right">
         <div class="search-container">
           <input
@@ -37,7 +40,7 @@
       </div>
     </div>
 
-    <!-- Модальные окна -->
+    <!-- Модальные окна (по флагам) -->
     <RegisterModal v-if="showRegister" @close="showRegister = false" @switchToLogin="switchToLogin" />
     <LoginModal v-if="showLogin" @close="showLogin = false" @switchToRegister="switchToRegister" @loginSuccess="showProfileModal" />
     <ProfileModal v-if="showProfile" @close="showProfile = false" @logout="handleLogout" />
@@ -73,13 +76,17 @@ export default {
     const router = useRouter();
     const store = useStore();
 
+    // Модель строки поиска
     const searchQuery = ref("");
+
+    // Флаги для показа модальных окон
     const showRegister = ref(false);
     const showLogin = ref(false);
     const showProfile = ref(false);
     const showAdminModal = ref(false);
     const showOrdersModal = ref(false);
 
+    // Обработка поиска — отправка события
     const handleSearch = () => {
       if (router.currentRoute.value.path !== "/") {
         router.push("/");
@@ -91,19 +98,24 @@ export default {
       );
     };
 
+    // Установка выбранного пункта выдачи
     const handlePointSelect = (point) => {
       store.commit("setSelectedPoint", point);
       store.commit("setShowDeliveryModal", false);
     };
 
+    // Проверка авторизации
     const isAuthenticated = computed(() => store.state.user.loggedIn);
+    // Получение роли пользователя
     const userRole = computed(() => store.state.user?.role || null);
 
+    // Проверка, является ли пользователь админом
     const isAdmin = computed(() => {
       const role_id = Number(userRole.value);
       return role_id === 1 || role_id === 2;
     });
 
+    // Открытие модального окна с пунктами выдачи
     const showDeliveryPoints = () => {
       store.commit("setShowDeliveryModal", true);
     };
@@ -125,18 +137,23 @@ export default {
     };
   },
   methods: {
+    // Открыть модальное окно заказов
     openOrdersModal() {
       this.showOrdersModal = true;
     },
+    // Переход на главную страницу
     goHome() {
       this.$router.push("/");
     },
+    // Открыть модалку администратора
     handleSecretClick() {
       this.showAdminModal = true;
     },
+    // Перейти в корзину
     goToCart() {
       this.$router.push("/cart");
     },
+    // Показать профиль или окно логина
     handleProfileClick() {
       if (this.store.state.user.loggedIn) {
         this.showProfile = true;
@@ -144,6 +161,7 @@ export default {
         this.showLogin = true;
       }
     },
+    // Переключение между логином и регистрацией
     switchToLogin() {
       this.showRegister = false;
       this.showLogin = true;
@@ -152,10 +170,12 @@ export default {
       this.showLogin = false;
       this.showRegister = true;
     },
+    // Показать профиль после логина
     showProfileModal() {
       this.showLogin = false;
       this.showProfile = true;
     },
+    // Выход из профиля
     handleLogout() {
       this.store.dispatch("logout");
       this.showProfile = false;
@@ -178,11 +198,11 @@ export default {
 
 /* Контейнер для контента с ограничением по ширине и центровкой */
 .nav-bar {
-  max-width: 1200px; /* Максимальная ширина содержимого */
-  margin: 0 auto;    /* Центрирование */
+  max-width: 1200px;
+  margin: 0 auto;
   padding: 15px 20px;
   display: flex;
-  justify-content: space-between; /* Распределение элементов */
+  justify-content: space-between;
   align-items: center;
 }
 

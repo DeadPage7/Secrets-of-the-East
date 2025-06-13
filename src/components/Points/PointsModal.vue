@@ -5,10 +5,12 @@
       <h2 class="modal-title">Пункты выдачи</h2>
 
       <div class="points-list">
+        <!-- Состояния загрузки -->
         <div v-if="loading" class="loading">Загрузка...</div>
         <div v-else-if="error" class="error">{{ error }}</div>
         <div v-else-if="points.length === 0" class="no-points">Нет доступных пунктов выдачи</div>
 
+        <!-- Список пунктов выдачи -->
         <div
           v-else
           v-for="point in points"
@@ -18,7 +20,6 @@
           @click="selectPoint(point)"
           tabindex="0"
           role="button"
-          @keydown.enter.space.prevent="selectPoint(point)"
         >
           <div class="point-card">
             <div class="point-header">
@@ -48,7 +49,7 @@ export default {
       points: [],
       loading: false,
       error: null,
-      selectedPoint: null, // выбранный пункт выдачи
+      selectedPoint: null
     };
   },
   methods: {
@@ -62,7 +63,6 @@ export default {
         const response = await api.get('/point');
         this.points = response.data;
       } catch (err) {
-        console.error('Ошибка при загрузке пунктов выдачи:', err);
         this.error = 'Не удалось загрузить пункты выдачи';
       } finally {
         this.loading = false;
@@ -70,18 +70,17 @@ export default {
     },
     selectPoint(point) {
       this.selectedPoint = point;
-      this.$emit('select', point); // отправляем выбранный пункт наружу
+      this.$emit('select', point);
     }
   },
   mounted() {
-    // Загружаем пункты при инициализации компонента
     this.fetchPoints();
   },
   watch: {
     show(newVal) {
       if (newVal) {
-        this.selectedPoint = null; // сброс выбора при открытии
-        this.fetchPoints();        // обновляем список пунктов при каждом открытии
+        this.selectedPoint = null;
+        this.fetchPoints();
       }
     }
   }
@@ -181,7 +180,6 @@ export default {
   box-shadow: 0 8px 15px rgba(0, 0, 0, 0.3);
 }
 
-/* Подсветка выбранного пункта */
 .point-item.selected {
   background: #c84b9e;
   box-shadow: 0 0 15px #ff85c1;
@@ -198,12 +196,6 @@ export default {
   display: flex;
   flex-direction: column;
   gap: 10px;
-}
-
-.point-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
 }
 
 .point-header h3 {
@@ -224,21 +216,19 @@ export default {
   color: #ff85c1;
 }
 
-.loading {
+.loading,
+.error,
+.no-points {
   text-align: center;
   font-size: 18px;
-  color: #ff85c1;
+  padding: 20px;
 }
 
 .error {
-  text-align: center;
-  font-size: 18px;
   color: red;
 }
 
 .no-points {
-  text-align: center;
-  font-size: 18px;
   color: #ccc;
 }
 

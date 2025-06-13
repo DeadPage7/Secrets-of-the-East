@@ -42,7 +42,7 @@
               <!-- Второй сотрудник -->
               <div class="employee-card">
                 <div class="employee-info">
-                  <h4>Рюгин Алексей Иваночив</h4>
+                  <h4>Рюгин Алексей Иванович</h4>
                   <p>Backend-разработчик</p>
                   <p>Телефон: <a>+7 952 804 6123</a></p>
                   <div class="social-links">

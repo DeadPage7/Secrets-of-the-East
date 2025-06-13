@@ -1,17 +1,18 @@
 <template>
   <div class="header-wrapper">
-    <!-- Частицы -->
+    <!-- Частицы на фоне (для анимации и атмосферности) -->
     <div class="particles-container">
       <span v-for="n in 80" :key="n" class="particle"></span>
     </div>
 
-    <!-- Контент -->
+    <!-- Основной контент: заголовок, описание, стили -->
     <div class="header-content">
       <h1 class="store-title">Тайны Востока</h1>
       <p class="intro-text">
         «Тайны Востока» — это современная азиатская мода без границ. Мы привозим прямо из улиц Сеула, Токио и Шанхая:
       </p>
 
+      <!-- Блок с описаниями каждого направления стиля -->
       <div class="style-sections">
         <div class="style-section">
           <h2>Корейский стиль</h2>
@@ -27,6 +28,7 @@
         </div>
       </div>
 
+      <!-- Информация о доставке -->
       <p class="delivery-info">
         Доставляем быстро — почувствуйте себя частью азиатской модной сцены!
       </p>
@@ -40,6 +42,7 @@ import { onMounted } from 'vue';
 export default {
   name: "HeaderInfo",
   setup() {
+    // При монтировании страницы задаём случайные стили для частиц
     onMounted(() => {
       const particles = document.querySelectorAll(".particle");
       particles.forEach(p => {
@@ -178,6 +181,7 @@ export default {
   animation: fadeIn 1s 2s forwards;
 }
 
+/* Заголовки секций */
 .style-section h2 {
   color: #fff;
   margin-bottom: 10px;
@@ -185,23 +189,27 @@ export default {
   transition: transform 0.3s ease, color 0.3s ease, text-shadow 0.3s ease;
 }
 
+/* Описание секций */
 .style-section p {
   color: #bbb;
   font-size: 18px;
-  transition: transform 0.3s ease, color 0.3s ease, text-shadow 0.3s ease;
+  text-align: justify; /* Выравнивание по ширине */
+  transition: none;
+  transform: none;
+  text-shadow: none;
 }
 
-/* Hover-эффекты */
+/* Hover-эффекты — только для заголовков */
 .style-section:hover h2 {
   transform: scale(1.2); /* Увеличиваем заголовок */
   color: #c84b9e;
-  text-shadow: 0 0 10px rgba(200, 75, 158, 0.5); /* Лёгкая тень */
+  text-shadow: 0 0 10px rgba(200, 75, 158, 0.5);
 }
 
 .style-section:hover p {
-  transform: scale(0.98); /* Уменьшаем обычный текст */
-  color: #fff; /* Белый цвет */
-  text-shadow: 0 0 10px rgba(255, 255, 255, 0.6); /* Лёгкая тень для текста */
+  transform: none;
+  color: #bbb;
+  text-shadow: none;
 }
 
 /* Текст про доставку */
@@ -210,5 +218,4 @@ export default {
   font-size: 20px;
   color: #c2c2da;
 }
-
 </style>
