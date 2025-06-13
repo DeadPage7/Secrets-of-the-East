@@ -17,16 +17,20 @@
         v-for="product in paginatedProducts"
         :key="product.id"
         class="product-card"
+        :class="{ 'out-of-stock': getProductTotalQuantity(product) === 0 }"
       >
-        <div class="product-image-container" @click="goToProduct(product.id)">
+        <div class="product-image-container" @click="handleProductClick(product)">
           <img
             :src="getImageUrl(product.photo)"
             :alt="product.name"
             class="product-image"
             @error="handleImageError"
           />
+          <div v-if="getProductTotalQuantity(product) === 0" class="out-of-stock-overlay">
+            <span class="out-of-stock-text">Нет в наличии</span>
+          </div>
         </div>
-        <div class="product-info" @click="goToProduct(product.id)">
+        <div class="product-info" @click="handleProductClick(product)">
           <div class="product-meta">
             <span class="product-country">{{ product.country?.name }}</span>
             <span class="product-category">{{ product.category?.name }}</span>
@@ -93,7 +97,6 @@ import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import api from '@/services/api';
 import { useStore } from 'vuex';
-
 import EditProductModal from '../admin/EditProductModal.vue';
 
 const props = defineProps({
@@ -137,6 +140,30 @@ const handleSearch = (event) => {
   searchTerm.value = event.detail.query || '';
 };
 
+// Метод для вычисления общего количества товара
+const getProductTotalQuantity = (product) => {
+  // Если есть простое поле quantity, используем его
+  if (product.quantity !== undefined) {
+    return product.quantity;
+  }
+
+  // Иначе считаем сумму всех вариантов
+  if (product.product_color_sizes && product.product_color_sizes.length > 0) {
+    return product.product_color_sizes.reduce((sum, item) => sum + item.quantity, 0);
+  }
+
+  // Если нет ни того ни другого - считаем что товара нет
+  return 0;
+};
+
+// Обработчик клика по товару
+const handleProductClick = (product) => {
+  if (getProductTotalQuantity(product) === 0) {
+    return; // Не делаем ничего, если товара нет в наличии
+  }
+  goToProduct(product.id);
+};
+
 const fetchProducts = async () => {
   loading.value = true;
 
@@ -147,7 +174,7 @@ const fetchProducts = async () => {
     // 1. Поиск
     if (searchTerm.value) {
       const searchRes = await api.get('/products/search', {
-        params: { q: searchTerm.value }
+        params: {q: searchTerm.value}
       });
       searchResults = searchRes.data.data;
     }
@@ -158,13 +185,25 @@ const fetchProducts = async () => {
     });
     filterResults = filterRes.data.data;
 
-    // 3. Объединение
+    // 3. Объединение результатов поиска и фильтрации
+    let combinedProducts = [];
     if (searchTerm.value) {
       const searchIds = searchResults.map(p => p.id);
-      products.value = filterResults.filter(p => searchIds.includes(p.id));
+      combinedProducts = filterResults.filter(p => searchIds.includes(p.id));
     } else {
-      products.value = filterResults;
+      combinedProducts = filterResults;
     }
+
+    // 4. Сортировка: товары с количеством > 0 впереди, потом товары с 0 количеством
+    combinedProducts.sort((a, b) => {
+      const aQty = getProductTotalQuantity(a);
+      const bQty = getProductTotalQuantity(b);
+      if (aQty === 0 && bQty > 0) return 1;
+      if (aQty > 0 && bQty === 0) return -1;
+      return 0;
+    });
+
+    products.value = combinedProducts;
 
   } catch (e) {
     console.error('Ошибка:', e);
@@ -173,7 +212,6 @@ const fetchProducts = async () => {
     loading.value = false;
   }
 };
-
 
 const totalPages = computed(() => Math.ceil(products.value.length / itemsPerPage));
 
@@ -198,21 +236,21 @@ const visiblePages = computed(() => {
 const goToPage = (page) => {
   if (page !== currentPage.value) {
     currentPage.value = page;
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    window.scrollTo({top: 0, behavior: 'smooth'});
   }
 };
 
 const prevPage = () => {
   if (currentPage.value > 1) {
     currentPage.value--;
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    window.scrollTo({top: 0, behavior: 'smooth'});
   }
 };
 
 const nextPage = () => {
   if (currentPage.value < totalPages.value) {
     currentPage.value++;
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    window.scrollTo({top: 0, behavior: 'smooth'});
   }
 };
 
@@ -256,7 +294,7 @@ const onProductUpdated = () => {
 watch(() => props.filters, () => {
   currentPage.value = 1;
   fetchProducts();
-}, { deep: true });
+}, {deep: true});
 
 watch(currentPage, () => {
   fetchProducts();
@@ -277,9 +315,7 @@ onUnmounted(() => {
 });
 </script>
 
-
 <style scoped>
-/* Стили оставляем ваши из примера */
 .products-container {
   position: relative;
   min-height: 500px;
@@ -315,6 +351,16 @@ onUnmounted(() => {
   border-color: rgba(255, 133, 193, 0.2);
 }
 
+.product-card.out-of-stock {
+  opacity: 0.7;
+}
+
+.product-card.out-of-stock:hover {
+  transform: none;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+  cursor: not-allowed;
+}
+
 .product-image-container {
   position: relative;
   height: 300px;
@@ -328,8 +374,31 @@ onUnmounted(() => {
   transition: transform 0.5s ease;
 }
 
-.product-card:hover .product-image {
+.product-card:not(.out-of-stock):hover .product-image {
   transform: scale(1.05);
+}
+
+.out-of-stock-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+}
+
+.out-of-stock-text {
+  color: white;
+  font-weight: bold;
+  font-size: 1.2rem;
+  text-transform: uppercase;
+  padding: 8px 16px;
+  background: rgba(255, 0, 0, 0.7);
+  border-radius: 4px;
 }
 
 .product-info {
@@ -365,7 +434,7 @@ onUnmounted(() => {
   transition: color 0.3s ease;
 }
 
-.product-card:hover .product-name {
+.product-card:not(.out-of-stock):hover .product-name {
   color: #ff85c1;
 }
 
