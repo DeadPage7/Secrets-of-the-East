@@ -1,5 +1,5 @@
 <template>
-  <div class="products-container">
+  <div class="products-container" ref="productsContainer">
     <!-- Состояние загрузки -->
     <div v-if="loading" class="loading-overlay">
       <div class="loader"></div>
@@ -20,16 +20,36 @@
         :class="{ 'out-of-stock': getProductTotalQuantity(product) === 0 }"
       >
         <div class="product-image-container" @click="handleProductClick(product)">
+          <!-- Состояние загрузки изображения -->
+          <div v-if="imageStates[product.id] === 'loading'" class="image-loading-skeleton"></div>
+
+          <!-- Основное изображение товара -->
           <img
-            :src="getImageUrl(product.photo)"
+            v-if="imageStates[product.id] === 'loaded'"
+            :src="getImageUrl(product)"
             :alt="product.name"
             class="product-image"
-            @error="handleImageError"
           />
+
+          <!-- Заглушка при ошибке загрузки изображения -->
+          <div v-if="imageStates[product.id] === 'error'" class="image-placeholder-container">
+            <img
+              :src="placeholderImage"
+              :alt="product.name"
+              class="placeholder-image"
+            />
+            <div class="placeholder-overlay">
+              <span class="placeholder-text">Фото недоступно</span>
+            </div>
+          </div>
+
+          <!-- Оверлей для товаров, которых нет в наличии -->
           <div v-if="getProductTotalQuantity(product) === 0" class="out-of-stock-overlay">
             <span class="out-of-stock-text">Нет в наличии</span>
           </div>
         </div>
+
+        <!-- Информация о товаре -->
         <div class="product-info" @click="handleProductClick(product)">
           <div class="product-meta">
             <span class="product-country">{{ product.country?.name }}</span>
@@ -41,7 +61,7 @@
           </div>
         </div>
 
-        <!-- Кнопка редактирования, видна только админам и менеджерам -->
+        <!-- Кнопка редактирования (видна только админам/менеджерам) -->
         <button
           v-if="isAdminOrManager"
           class="edit-button"
@@ -82,7 +102,7 @@
       </button>
     </div>
 
-    <!-- Модальное окно редактирования -->
+    <!-- Модальное окно редактирования товара -->
     <EditProductModal
       v-if="showEditModal"
       :productId="editingProductId"
@@ -98,7 +118,9 @@ import { useRouter } from 'vue-router';
 import api from '@/services/api';
 import { useStore } from 'vuex';
 import EditProductModal from '../admin/EditProductModal.vue';
+import placeholderImage from '@/assets/images/product-placeholder.jpeg';
 
+// Пропсы компонента
 const props = defineProps({
   filters: {
     type: Object,
@@ -106,86 +128,103 @@ const props = defineProps({
   }
 });
 
+// Реактивные переменные
 const products = ref([]);
 const loading = ref(false);
 const currentPage = ref(1);
-const itemsPerPage = 12;
-
+const itemsPerPage = 12; // Количество товаров на странице
 const showEditModal = ref(false);
 const editingProductId = ref(null);
+const imageStates = ref({}); // Состояния загрузки изображений
+const searchTerm = ref(''); // Поисковый запрос
 
 const router = useRouter();
 const store = useStore();
 
+// Получаем роль пользователя из хранилища
 const userRole = computed(() => store.state.user?.role || null);
+
+// Проверяем, является ли пользователь администратором или менеджером
 const isAdminOrManager = computed(() => {
   const role_id = Number(userRole.value);
   return role_id === 1 || role_id === 2;
 });
 
-const cleanParams = (obj) => {
-  const res = {};
-  for (const key in obj) {
-    const val = obj[key];
-    if (val !== null && val !== undefined && val !== '') {
-      res[key] = val;
+// Формируем URL изображения товара
+const getImageUrl = (product) => {
+  if (!product.photo) return '';
+  return product.photo.startsWith('http')
+    ? product.photo
+    : `http://secrets-of-the-east.ru/storage/${product.photo}`;
+};
+
+// Предзагрузка изображений товаров
+const preloadImages = (products) => {
+  products.forEach(product => {
+    const img = new Image();
+    const imageUrl = getImageUrl(product);
+
+    if (!imageUrl) {
+      imageStates.value[product.id] = 'error';
+      return;
     }
-  }
-  return res;
+
+    imageStates.value[product.id] = 'loading';
+    img.src = imageUrl;
+
+    img.onload = () => {
+      imageStates.value[product.id] = 'loaded';
+    };
+
+    img.onerror = () => {
+      imageStates.value[product.id] = 'error';
+    };
+  });
 };
 
-const searchTerm = ref('');
-
-const handleSearch = (event) => {
-  searchTerm.value = event.detail.query || '';
-};
-
-// Метод для вычисления общего количества товара
+// Получаем общее количество товара (учитывая варианты)
 const getProductTotalQuantity = (product) => {
-  // Если есть простое поле quantity, используем его
   if (product.quantity !== undefined) {
     return product.quantity;
   }
 
-  // Иначе считаем сумму всех вариантов
   if (product.product_color_sizes && product.product_color_sizes.length > 0) {
     return product.product_color_sizes.reduce((sum, item) => sum + item.quantity, 0);
   }
 
-  // Если нет ни того ни другого - считаем что товара нет
   return 0;
 };
 
 // Обработчик клика по товару
 const handleProductClick = (product) => {
-  if (getProductTotalQuantity(product) === 0) {
-    return; // Не делаем ничего, если товара нет в наличии
-  }
+  if (getProductTotalQuantity(product) === 0) return;
   goToProduct(product.id);
 };
 
+// Загрузка товаров с сервера
 const fetchProducts = async () => {
   loading.value = true;
+  imageStates.value = {};
 
   try {
     let searchResults = [];
     let filterResults = [];
 
-    // 1. Поиск
+    // Если есть поисковый запрос - выполняем поиск
     if (searchTerm.value) {
       const searchRes = await api.get('/products/search', {
-        params: {q: searchTerm.value}
+        params: { q: searchTerm.value }
       });
       searchResults = searchRes.data.data;
     }
 
-    // 2. Фильтрация
+    // Загружаем товары по фильтрам
     const filterRes = await api.get('/products/filter', {
       params: cleanParams(props.filters)
     });
     filterResults = filterRes.data.data;
 
-    // 3. Объединение результатов поиска и фильтрации
+    // Объединяем результаты поиска и фильтрации
     let combinedProducts = [];
     if (searchTerm.value) {
       const searchIds = searchResults.map(p => p.id);
@@ -194,7 +233,7 @@ const fetchProducts = async () => {
       combinedProducts = filterResults;
     }
 
-    // 4. Сортировка: товары с количеством > 0 впереди, потом товары с 0 количеством
+    // Сортируем товары: сначала те, что в наличии
     combinedProducts.sort((a, b) => {
       const aQty = getProductTotalQuantity(a);
       const bQty = getProductTotalQuantity(b);
@@ -204,15 +243,17 @@ const fetchProducts = async () => {
     });
 
     products.value = combinedProducts;
+    preloadImages(combinedProducts);
 
   } catch (e) {
-    console.error('Ошибка:', e);
+    console.error('Ошибка загрузки товаров:', e);
     products.value = [];
   } finally {
     loading.value = false;
   }
 };
 
+// Вычисляемые свойства для пагинации
 const totalPages = computed(() => Math.ceil(products.value.length / itemsPerPage));
 
 const paginatedProducts = computed(() =>
@@ -233,37 +274,49 @@ const visiblePages = computed(() => {
   return pages;
 });
 
+// Навигация по страницам
+const productsContainer = ref(null);
+
+const scrollToComponent = () => {
+  if (productsContainer.value) {
+    // Вариант 1: Просто к верху компонента
+    productsContainer.value.scrollIntoView({
+      behavior: 'smooth',
+      block: 'start'
+    });
+
+    // ИЛИ Вариант 2: С учетом фиксированного хедера (если есть)
+    const headerHeight = 80; // Высота вашего хедера
+    const topPos = productsContainer.value.offsetTop - headerHeight;
+    window.scrollTo({
+      top: topPos,
+      behavior: 'smooth'
+    });
+  }
+};
+
 const goToPage = (page) => {
   if (page !== currentPage.value) {
     currentPage.value = page;
-    window.scrollTo({top: 0, behavior: 'smooth'});
+    scrollToComponent();
   }
 };
 
 const prevPage = () => {
   if (currentPage.value > 1) {
     currentPage.value--;
-    window.scrollTo({top: 0, behavior: 'smooth'});
+    scrollToComponent();
   }
 };
 
 const nextPage = () => {
   if (currentPage.value < totalPages.value) {
     currentPage.value++;
-    window.scrollTo({top: 0, behavior: 'smooth'});
+    scrollToComponent();
   }
 };
 
-const getImageUrl = (path) => {
-  if (!path) return '/placeholder-product.jpg';
-  if (path.startsWith('http')) return path;
-  return `http://secrets-of-the-east.ru/storage/${path}`;
-};
-
-const handleImageError = (e) => {
-  e.target.src = '/placeholder-product.jpg';
-};
-
+// Форматирование цены
 const formatPrice = (price) => {
   return new Intl.NumberFormat('ru-RU', {
     style: 'currency',
@@ -272,10 +325,12 @@ const formatPrice = (price) => {
   }).format(price);
 };
 
+// Переход на страницу товара
 const goToProduct = (id) => {
   router.push(`/product/${id}`);
 };
 
+// Управление модальным окном редактирования
 const openEditModal = (product) => {
   editingProductId.value = product.id;
   showEditModal.value = true;
@@ -291,20 +346,35 @@ const onProductUpdated = () => {
   fetchProducts();
 };
 
+// Очистка параметров от пустых значений
+const cleanParams = (obj) => {
+  const res = {};
+  for (const key in obj) {
+    const val = obj[key];
+    if (val !== null && val !== undefined && val !== '') {
+      res[key] = val;
+    }
+  }
+  return res;
+};
+
+// Обработчик поискового запроса
+const handleSearch = (event) => {
+  searchTerm.value = event.detail.query || '';
+};
+
+// Наблюдатели за изменениями
 watch(() => props.filters, () => {
   currentPage.value = 1;
   fetchProducts();
-}, {deep: true});
-
-watch(currentPage, () => {
-  fetchProducts();
-});
+}, { deep: true });
 
 watch(searchTerm, () => {
   currentPage.value = 1;
   fetchProducts();
 });
 
+// Хуки жизненного цикла
 onMounted(() => {
   window.addEventListener('search-request', handleSearch);
   fetchProducts();
@@ -316,6 +386,7 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
+/* Стили остаются без изменений */
 .products-container {
   position: relative;
   min-height: 500px;
@@ -365,17 +436,63 @@ onUnmounted(() => {
   position: relative;
   height: 300px;
   overflow: hidden;
+  background-color: #2a2a40;
+}
+
+.image-loading-skeleton {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, #2a2a40 25%, #3a3a57 50%, #2a2a40 75%);
+  background-size: 200% 100%;
+  animation: loading 1.5s infinite;
 }
 
 .product-image {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  transition: transform 0.5s ease;
+  transition: opacity 0.3s ease;
 }
 
-.product-card:not(.out-of-stock):hover .product-image {
-  transform: scale(1.05);
+.image-placeholder-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.placeholder-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.7;
+  filter: brightness(0.8);
+}
+
+.placeholder-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(0, 0, 0, 0.3);
+}
+
+.placeholder-text {
+  color: white;
+  font-size: 16px;
+  font-weight: 500;
+  text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.5);
+  padding: 8px 16px;
+  background-color: rgba(0, 0, 0, 0.3);
+  border-radius: 4px;
+}
+
+@keyframes loading {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
 }
 
 .out-of-stock-overlay {

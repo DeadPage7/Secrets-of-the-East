@@ -2,6 +2,9 @@
   <div class="filter-container">
     <h2>Фильтры</h2>
 
+    <!-- Ошибка загрузки фильтров -->
+    <div v-if="errors.load" class="error-message">{{ errors.load }}</div>
+
     <!-- Фильтр по категориям -->
     <div class="filter-section" :class="sectionClass">
       <h3>Категории</h3>
@@ -41,7 +44,7 @@
         <div class="price-inputs">
           <input
             type="number"
-            v-model="priceRange[0]"
+            v-model.number="priceRange[0]"
             :min="minPrice"
             :max="maxPrice"
             @input="updatePriceText"
@@ -51,7 +54,7 @@
           <span>—</span>
           <input
             type="number"
-            v-model="priceRange[1]"
+            v-model.number="priceRange[1]"
             :min="minPrice"
             :max="maxPrice"
             @input="updatePriceText"
@@ -66,6 +69,7 @@
       </div>
     </div>
 
+    <!-- Кнопки применения и сброса -->
     <button @click="applyFilters" class="apply-btn">Применить фильтры</button>
     <button @click="resetFilters" class="reset-btn">Сбросить фильтры</button>
   </div>
@@ -73,22 +77,31 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import api from "@/services/api";
+import api from "@/services/api"
 
+// Хранилища для выбранных фильтров
 const selectedCategory = ref('')
 const selectedCountry = ref('')
 const selectedGender = ref('')
 const priceRange = ref([0, 100000])
+
+// Границы диапазона цены
 const minPrice = 0
 const maxPrice = 100000
 
+// Данные для селектов
 const categories = ref([])
 const countries = ref([])
 
+// Ошибки загрузки данных фильтра
+const errors = ref({})
+
+// Эмит события с фильтрами
 const emit = defineEmits(['filter-changed'])
 
-
+// Загрузка категорий и стран с API
 const loadFilterData = async () => {
+  errors.value.load = null
   try {
     const [cats, cntrs] = await Promise.all([
       api.get('/category'),
@@ -97,40 +110,39 @@ const loadFilterData = async () => {
     categories.value = cats.data
     countries.value = cntrs.data
   } catch (error) {
-    console.error('Ошибка загрузки фильтров:', error)
+    errors.value.load = 'Не удалось загрузить данные фильтров. Попробуйте обновить страницу.'
   }
 }
 
+// Отправляем выбранные фильтры наружу
 const applyFilters = () => {
   const filters = {
     category_id: selectedCategory.value || null,
     country_id: selectedCountry.value || null,
     min_price: priceRange.value[0] !== minPrice ? priceRange.value[0] : null,
     max_price: priceRange.value[1] !== maxPrice ? priceRange.value[1] : null,
-    sex: selectedGender.value || null // Используем 'sex' вместо 'gender' для соответствия API
+    sex: selectedGender.value || null,
   }
 
+  // Убираем null значения из объекта фильтров
   const cleanFilters = Object.fromEntries(
     Object.entries(filters).filter(([_, value]) => value !== null && value !== undefined)
-  );
+  )
 
   emit('filter-changed', cleanFilters)
 }
 
+// Сброс фильтров в начальное состояние
 const resetFilters = () => {
   selectedCategory.value = ''
   selectedCountry.value = ''
   selectedGender.value = ''
   priceRange.value = [minPrice, maxPrice]
-  emit('filter-changed', {
-    category_id: '',
-    country_id: '',
-    price_min: minPrice,
-    price_max: maxPrice,
-    sex: ''
-  })
+
+  emit('filter-changed', {})
 }
 
+// Проверка, чтобы минимальная цена не была больше максимальной
 const updatePriceText = () => {
   if (priceRange.value[0] > priceRange.value[1]) {
     priceRange.value[0] = priceRange.value[1]
@@ -141,11 +153,22 @@ onMounted(() => {
   loadFilterData()
 })
 
-const sectionClass = 'filter-section-anim' // Добавление класса для анимации
+const sectionClass = 'filter-section-anim' // Класс для анимации
 </script>
 
 <style scoped>
-/* Основной контейнер */
+/* Ошибки в стиле, чтобы было как в твоем примере */
+.error-message {
+  color: #ff7a7a;
+  background: rgba(255, 122, 122, 0.1);
+  padding: 10px;
+  border-radius: 6px;
+  font-size: 14px;
+  text-align: center;
+  margin-bottom: 12px;
+}
+
+/* Основной контейнер фильтра */
 .filter-container {
   background: #1a1a2e; /* Темный фон */
   color: #f7f7f7; /* Светлый текст */
@@ -155,7 +178,7 @@ const sectionClass = 'filter-section-anim' // Добавление класса 
   animation: fadeIn 0.8s ease-out;
 }
 
-/* Элементы фильтров */
+/* Секции фильтра */
 .filter-section {
   margin-bottom: 20px;
   opacity: 0;
@@ -163,34 +186,32 @@ const sectionClass = 'filter-section-anim' // Добавление класса 
   transition: all 0.3s ease;
 }
 
-/* Выделение элементов фильтров */
+/* Селекты */
 .filter-select {
   width: 100%;
   padding: 10px;
   border: 1px solid #444;
   border-radius: 6px;
-  background: #2a2a40; /* Тёмный фон для инпутов */
-  color: #f7f7f7; /* Светлый текст */
+  background: #2a2a40;
+  color: #f7f7f7;
   transition: background-color 0.3s ease;
 }
 
-/* Активные и фокусные состояния */
 .filter-select:hover {
   background: #333;
 }
 
 .filter-select:focus {
-  border-color: #ff85c1; /* Неоновый розовый для фокуса */
+  border-color: #ff85c1;
   background: #333;
 }
 
-/* Рамки и фон в элементах списка */
 .filter-select option {
-  background: #2a2a40; /* Тёмный фон */
-  color: #f7f7f7; /* Светлый текст */
+  background: #2a2a40;
+  color: #f7f7f7;
 }
 
-/* Диапазон цен */
+/* Диапазон цены */
 .price-range {
   padding: 10px 0;
 }
@@ -201,7 +222,6 @@ const sectionClass = 'filter-section-anim' // Добавление класса 
   gap: 10px;
 }
 
-/* Инпуты для диапазона цен */
 .price-input {
   width: 48%;
   padding: 10px;
@@ -239,15 +259,13 @@ button:hover {
   transform: translateY(-3px);
 }
 
-/* Зелёная кнопка для применения */
 .apply-btn {
-  background: #4CAF50; /* Тёмно-зелёный для кнопки "Применить фильтры" */
+  background: #4caf50;
   color: white;
 }
 
-/* Красная кнопка для сброса */
 .reset-btn {
-  background: #D32F2F; /* Тёмно-красный для кнопки "Сбросить фильтры" */
+  background: #d32f2f;
   color: white;
 }
 
@@ -255,14 +273,10 @@ button:focus {
   outline: none;
 }
 
-/* Анимация появления */
+/* Анимации */
 @keyframes fadeIn {
-  0% {
-    opacity: 0;
-  }
-  100% {
-    opacity: 1;
-  }
+  0% { opacity: 0; }
+  100% { opacity: 1; }
 }
 
 @keyframes fadeInUp {
