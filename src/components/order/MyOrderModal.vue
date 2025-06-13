@@ -44,18 +44,20 @@
         <p>Адрес: {{ formatAddress(selectedOrder.address) }}</p>
         <p>Итого: {{ selectedOrder.total_cost }} ₽</p>
 
-        <!-- Отображаем статус без возможности изменить -->
         <p>Статус: <strong>{{ selectedOrder.status }}</strong></p>
 
         <h4>Товары:</h4>
-        <ul>
-          <li v-for="item in selectedOrder.items" :key="item.product_id" class="item-block">
+        <ul class="items-list">
+          <li v-for="item in selectedOrder.items" :key="item.product_id" class="item-card">
             <img :src="item.photo" alt="Фото товара" />
-            <div>
-              <strong>{{ item.name }}</strong><br />
-              {{ item.quantity }} шт. по {{ item.price }} ₽<br />
-              Цвет: {{ item.color || '—' }}, Размер: {{ item.size || '—' }}<br />
-              Сумма: {{ item.total }} ₽
+            <div class="item-info">
+              <strong class="item-name">{{ item.name }}</strong>
+              <div class="item-quantity-price">
+                {{ item.quantity }} шт
+              </div>
+              <div class="item-params">
+                Цвет: <span>{{ item.color || '—' }}</span>, Размер: <span>{{ item.size || '—' }}</span>
+              </div>
             </div>
           </li>
         </ul>
@@ -70,8 +72,6 @@
           {{ cancelLoading ? 'Отмена...' : 'Отменить заказ' }}
         </button>
 
-        <!-- Кнопка возврата к списку -->
-        <button @click="tab = 'list'" class="back-btn">Назад к списку</button>
       </div>
 
       <!-- Кнопка закрытия модалки -->
@@ -87,11 +87,11 @@ import api from '@/services/api'
 // Событие для закрытия модалки
 const emit = defineEmits(['close'])
 
-const tab = ref('list')              // Текущая вкладка
-const orders = ref([])               // Список заказов
-const selectedOrder = ref(null)      // Выбранный заказ
-const loading = ref(false)           // Загрузка списка
-const cancelLoading = ref(false)     // Загрузка отмены
+const tab = ref('list')
+const orders = ref([])
+const selectedOrder = ref(null)
+const loading = ref(false)
+const cancelLoading = ref(false)
 
 // Закрыть модалку
 function closeModal() {
@@ -177,8 +177,10 @@ onMounted(() => {
 <style scoped>
 .modal-overlay {
   position: fixed;
-  top: 0; left: 0;
-  width: 100%; height: 100%;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
   background-color: rgba(0, 0, 0, 0.7);
   display: flex;
   justify-content: center;
@@ -256,42 +258,74 @@ onMounted(() => {
   overflow-y: auto;
 }
 
-.item-block {
+/* Новый стиль для списка товаров */
+.items-list {
+  list-style: none;
+  padding: 0;
+  margin: 15px 0 0 0;
   display: flex;
-  gap: 10px;
-  margin-bottom: 12px;
+  flex-direction: column;
+  gap: 15px;
+}
+
+/* Карточка товара */
+.item-card {
+  display: flex;
+  gap: 20px;
   background: #2e2e4e;
-  padding: 10px;
-  border-radius: 10px;
-}
-
-.item-block img {
-  width: 60px;
-  height: 60px;
-  object-fit: cover;
-  border-radius: 8px;
-}
-
-.back-btn {
-  margin-top: 20px;
-  background-color: #c84b9e;
-  color: white;
-  padding: 10px;
-  border: none;
-  border-radius: 10px;
-  cursor: pointer;
-  width: 100%;
-  font-weight: bold;
+  padding: 15px 20px;
+  border-radius: 15px;
+  align-items: center;
+  box-shadow: 0 3px 10px rgba(200, 75, 158, 0.4);
   transition: background-color 0.3s;
 }
 
-.back-btn:hover {
-  background-color: #ff85c1;
+.item-card:hover {
+  background-color: #3a3a5e;
+}
+
+/* Картинка товара */
+.item-card img {
+  width: 90px;
+  height: 90px;
+  border-radius: 12px;
+  object-fit: cover;
+  flex-shrink: 0; /* Не сжимать изображение */
+  box-shadow: 0 0 10px #c84b9e88;
+}
+
+/* Информация о товаре */
+.item-info {
+  display: flex;
+  flex-direction: column;
+  color: #fff;
+  font-size: 16px;
+  user-select: none;
+}
+
+/* Название товара */
+.item-name {
+  font-weight: 700;
+  font-size: 18px;
+  margin-bottom: 6px;
+  color: #ff85c1;
+}
+
+/* Количество и цена */
+.item-quantity-price {
+  margin-bottom: 6px;
+  color: #f0d3f7;
+}
+
+/* Цвет и размер */
+.item-params span {
+  color: #d7a9df;
+  font-weight: 600;
 }
 
 .close-modal-btn {
   margin-top: 15px;
-  background-color: #555;
+  background-color: #c84b9e;
   width: 100%;
   border-radius: 12px;
   border: none;

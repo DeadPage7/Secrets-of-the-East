@@ -3,16 +3,20 @@
     <div class="modal-content">
       <h2 class="modal-title">Пользователи</h2>
 
-      <!-- Вкладки -->
+      <!-- Вкладки переключения между списком и профилем -->
       <div class="tabs">
+        <!-- Активная вкладка подсвечивается -->
         <button :class="{active: tab === 'list'}" @click="tab = 'list'">Список</button>
+        <!-- Вкладка профиля доступна только если выбран пользователь -->
         <button :class="{active: tab === 'detail'}" :disabled="!selectedUser" @click="tab = 'detail'">Профиль</button>
       </div>
 
-      <!-- Список пользователей -->
+      <!-- Отображение списка пользователей -->
       <div v-if="tab === 'list'">
+        <!-- Показ индикатора загрузки -->
         <div v-if="loading">Загрузка...</div>
         <ul v-else class="manager-list">
+          <!-- Перебор массива пользователей, клик выбирает пользователя -->
           <li v-for="user in users" :key="user.id" class="manager-item" @click="selectUser(user)">
             <div>
               <strong>{{ user.name }}</strong><br />
@@ -23,8 +27,9 @@
         </ul>
       </div>
 
-      <!-- Детали пользователя -->
+      <!-- Отображение профиля выбранного пользователя -->
       <div v-if="tab === 'detail' && selectedUser">
+        <!-- Поля для редактирования -->
         <input v-model="selectedUser.name" class="modal-input" placeholder="Имя" />
         <input v-model="selectedUser.email" class="modal-input" placeholder="Email" />
         <input v-model="selectedUser.telephone" class="modal-input" placeholder="Телефон" />
@@ -35,13 +40,13 @@
           <option :value="1">Женский</option>
         </select>
 
-        <!-- ❌ Удалено: поле изменения роли -->
-
+        <!-- Кнопка сохранения изменений -->
         <button class="submit-btn" @click="updateUser">Сохранить</button>
+        <!-- Кнопка возврата к списку -->
         <button class="cancel-btn" @click="tab = 'list'">Назад</button>
       </div>
 
-      <!-- Кнопка закрытия -->
+      <!-- Кнопка закрытия модального окна -->
       <button class="close-modal-btn" @click="emit('close')">Закрыть</button>
     </div>
   </div>
@@ -49,38 +54,39 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import api from '@/services/api'
+import api from '@/services/api'  // импорт API для запросов
 
-const emit = defineEmits(['close'])
+const emit = defineEmits(['close']) // событие для закрытия модалки
 
-const tab = ref('list')
-const users = ref([])
-const selectedUser = ref(null)
-const loading = ref(true)
+const tab = ref('list')             // активная вкладка (список или профиль)
+const users = ref([])               // массив пользователей
+const selectedUser = ref(null)      // выбранный пользователь для редактирования
+const loading = ref(true)           // состояние загрузки
 
-// Получение пользователей
+// Функция загрузки пользователей с сервера
 const fetchUsers = async () => {
   loading.value = true
   try {
-    const response = await api.get('/user')
-    users.value = response.data
+    const response = await api.get('/user') // запрос списка пользователей
+    users.value = response.data             // сохраняем в reactive переменную
   } catch (error) {
-    alert('Ошибка загрузки пользователей')
+    alert('Ошибка загрузки пользователей')  // ошибка запроса
     console.error(error)
   } finally {
-    loading.value = false
+    loading.value = false                    // отключаем индикатор загрузки
   }
 }
 
-// При выборе пользователя переходим во вкладку detail
+// При выборе пользователя копируем объект и переключаемся на вкладку профиля
 const selectUser = (user) => {
-  selectedUser.value = { ...user } // копия объекта
-  tab.value = 'detail'
+  selectedUser.value = { ...user } // создаём копию объекта для редактирования
+  tab.value = 'detail'             // переключение вкладки
 }
 
-// Обновление данных пользователя (без роли)
+// Отправка обновлённых данных пользователя на сервер
 const updateUser = async () => {
   try {
+    // Формируем данные для отправки (без роли)
     const payload = {
       name: selectedUser.value.name,
       email: selectedUser.value.email,
@@ -88,11 +94,14 @@ const updateUser = async () => {
       sex: selectedUser.value.sex
     }
 
+    // Отправка PATCH-запроса на обновление пользователя
     await api.patch(`/user/${selectedUser.value.id}`, payload)
     alert('Пользователь обновлён')
-    await fetchUsers()
-    tab.value = 'list'
+
+    await fetchUsers() // обновляем список после изменения
+    tab.value = 'list' // возвращаемся к списку
   } catch (error) {
+    // Если ошибка валидации, показываем её пользователю
     if (error.response?.status === 422) {
       const messages = Object.values(error.response.data.errors).flat().join('\n')
       alert('Ошибка:\n' + messages)
@@ -103,13 +112,14 @@ const updateUser = async () => {
   }
 }
 
+// При монтировании компонента загружаем список пользователей
 onMounted(() => {
   fetchUsers()
 })
 </script>
 
 <style scoped>
-/* (оставлен без изменений — как у модалки менеджеров) */
+/* Фон и позиционирование модального окна */
 .modal-overlay {
   position: fixed;
   top: 0; left: 0;
@@ -121,6 +131,7 @@ onMounted(() => {
   z-index: 50;
 }
 
+/* Основной контейнер модалки */
 .modal-content {
   background-color: #1a1a2e;
   padding: 30px;
@@ -133,12 +144,14 @@ onMounted(() => {
   position: relative;
 }
 
+/* Заголовок модалки */
 .modal-title {
   font-size: 22px;
   margin-bottom: 15px;
   color: #ff85c1;
 }
 
+/* Стили вкладок */
 .tabs {
   display: flex;
   margin-bottom: 20px;
@@ -159,6 +172,7 @@ onMounted(() => {
   background-color: #c84b9e;
 }
 
+/* Список пользователей */
 .manager-list {
   list-style: none;
   padding: 0;
@@ -175,6 +189,7 @@ onMounted(() => {
   cursor: pointer;
 }
 
+/* Поля ввода */
 .modal-input {
   display: block;
   width: 100%;
@@ -185,6 +200,7 @@ onMounted(() => {
   font-size: 16px;
 }
 
+/* Кнопки сохранения и отмены */
 .submit-btn,
 .cancel-btn {
   width: 100%;
@@ -203,6 +219,7 @@ onMounted(() => {
   background-color: #ff85c1;
 }
 
+/* Кнопка закрытия модального окна */
 .close-modal-btn {
   margin-top: 15px;
   background-color: #555;
