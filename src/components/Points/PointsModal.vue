@@ -46,40 +46,72 @@ export default {
   },
   data() {
     return {
-      points: [],
-      loading: false,
-      error: null,
-      selectedPoint: null
+      points: [],         // список всех пунктов выдачи
+      loading: false,     // индикатор загрузки пунктов
+      error: null,        // ошибка загрузки
+      selectedPoint: null // текущий выбранный пункт (локально в компоненте)
     };
   },
   methods: {
+    // Закрытие модального окна
     close() {
       this.$emit('close');
     },
+    // Загрузка списка пунктов с API
     async fetchPoints() {
       try {
         this.loading = true;
         this.error = null;
         const response = await api.get('/point');
         this.points = response.data;
+
+        // Если уже есть выбранный пункт в Vuex или localStorage, восстанавливаем его
+        const savedPoint = this.$store.getters.selectedPoint;
+        if (savedPoint) {
+          this.selectedPoint = savedPoint;
+        } else {
+          // Если в хранилище нет, попробуем из localStorage (на случай если Vuex ещё не инициализирован)
+          const localPoint = localStorage.getItem('selectedPoint');
+          if (localPoint) {
+            try {
+              this.selectedPoint = JSON.parse(localPoint);
+            } catch {
+              this.selectedPoint = null;
+            }
+          }
+        }
+
       } catch (err) {
         this.error = 'Не удалось загрузить пункты выдачи';
       } finally {
         this.loading = false;
       }
     },
+    // Обработка выбора пункта
     selectPoint(point) {
       this.selectedPoint = point;
-      this.$emit('select', point);
+
+      // Сохраняем выбранный пункт в Vuex
+      this.$store.commit("setSelectedPoint", point);
+
+      // Сохраняем в localStorage (на всякий случай)
+      localStorage.setItem("selectedPoint", JSON.stringify(point));
+
+      // Передаём выбор родителю, если нужно
+      this.$emit("select", point);
+
+      // Закрываем модалку
+      this.close();
     }
   },
   mounted() {
     this.fetchPoints();
   },
   watch: {
+    // При открытии модалки повторно загружаем пункты и сбрасываем выбранный пункт
     show(newVal) {
       if (newVal) {
-        this.selectedPoint = null;
+        // Не сбрасываем selectedPoint при открытии, чтобы всегда показывался последний выбранный
         this.fetchPoints();
       }
     }
@@ -88,6 +120,7 @@ export default {
 </script>
 
 <style scoped>
+/* Стили без изменений */
 .modal-overlay {
   position: fixed;
   top: 0;

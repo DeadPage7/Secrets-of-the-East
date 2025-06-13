@@ -3,7 +3,7 @@ import api from "@/services/api";
 
 export default createStore({
   state: {
-    selectedPoint: null,          // выбранный пункт выдачи
+    selectedPoint: JSON.parse(localStorage.getItem('selectedPoint')) || null, // выбранный пункт выдачи (загружается из localStorage)
     showDeliveryModal: false,     // видимость модального окна
     isLoading: false,             // индикатор загрузки
     user: {
@@ -19,6 +19,7 @@ export default createStore({
     },
     setSelectedPoint(state, point) {
       state.selectedPoint = point;   // сохраняем выбранный пункт
+      localStorage.setItem('selectedPoint', JSON.stringify(point)); // сохраняем в localStorage
     },
     setShowDeliveryModal(state, value) {
       state.showDeliveryModal = value;
