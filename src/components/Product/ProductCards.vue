@@ -89,15 +89,20 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue';
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import api from '@/services/api';
 import { useStore } from 'vuex';
 
-// Импорт модального окна редактирования товара
 import EditProductModal from '../admin/EditProductModal.vue';
 
-// Переменные реактивные
+const props = defineProps({
+  filters: {
+    type: Object,
+    default: () => ({})
+  }
+});
+
 const products = ref([]);
 const loading = ref(false);
 const currentPage = ref(1);
@@ -109,30 +114,69 @@ const editingProductId = ref(null);
 const router = useRouter();
 const store = useStore();
 
-// Роль пользователя из Vuex
 const userRole = computed(() => store.state.user?.role || null);
 const isAdminOrManager = computed(() => {
   const role_id = Number(userRole.value);
   return role_id === 1 || role_id === 2;
 });
 
-// Функция загрузки товаров (пример, можно адаптировать под свои фильтры)
+const cleanParams = (obj) => {
+  const res = {};
+  for (const key in obj) {
+    const val = obj[key];
+    if (val !== null && val !== undefined && val !== '') {
+      res[key] = val;
+    }
+  }
+  return res;
+};
+
+const searchTerm = ref('');
+
+const handleSearch = (event) => {
+  searchTerm.value = event.detail.query || '';
+};
+
 const fetchProducts = async () => {
   loading.value = true;
+
   try {
-    const response = await api.get('/products/filter', {
-      params: { page: currentPage.value, per_page: itemsPerPage }
+    let searchResults = [];
+    let filterResults = [];
+
+    // 1. Поиск
+    if (searchTerm.value) {
+      const searchRes = await api.get('/products/search', {
+        params: { q: searchTerm.value }
+      });
+      searchResults = searchRes.data.data;
+    }
+
+    // 2. Фильтрация
+    const filterRes = await api.get('/products/filter', {
+      params: cleanParams(props.filters)
     });
-    products.value = response.data.data || response.data;
-  } catch (error) {
-    console.error('Ошибка при загрузке товаров:', error);
+    filterResults = filterRes.data.data;
+
+    // 3. Объединение
+    if (searchTerm.value) {
+      const searchIds = searchResults.map(p => p.id);
+      products.value = filterResults.filter(p => searchIds.includes(p.id));
+    } else {
+      products.value = filterResults;
+    }
+
+  } catch (e) {
+    console.error('Ошибка:', e);
     products.value = [];
   } finally {
     loading.value = false;
   }
 };
 
+
 const totalPages = computed(() => Math.ceil(products.value.length / itemsPerPage));
+
 const paginatedProducts = computed(() =>
   products.value.slice((currentPage.value - 1) * itemsPerPage, currentPage.value * itemsPerPage)
 );
@@ -151,17 +195,20 @@ const visiblePages = computed(() => {
   return pages;
 });
 
-// Переходы по страницам
 const goToPage = (page) => {
-  currentPage.value = page;
-  window.scrollTo({ top: 0, behavior: 'smooth' });
+  if (page !== currentPage.value) {
+    currentPage.value = page;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
 };
+
 const prevPage = () => {
   if (currentPage.value > 1) {
     currentPage.value--;
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 };
+
 const nextPage = () => {
   if (currentPage.value < totalPages.value) {
     currentPage.value++;
@@ -169,19 +216,16 @@ const nextPage = () => {
   }
 };
 
-// Получение URL картинки товара
 const getImageUrl = (path) => {
   if (!path) return '/placeholder-product.jpg';
   if (path.startsWith('http')) return path;
   return `http://secrets-of-the-east.ru/storage/${path}`;
 };
 
-// Обработка ошибки загрузки изображения
 const handleImageError = (e) => {
   e.target.src = '/placeholder-product.jpg';
 };
 
-// Форматирование цены в рубли
 const formatPrice = (price) => {
   return new Intl.NumberFormat('ru-RU', {
     style: 'currency',
@@ -190,32 +234,46 @@ const formatPrice = (price) => {
   }).format(price);
 };
 
-// Переход на страницу просмотра товара
 const goToProduct = (id) => {
   router.push(`/product/${id}`);
 };
 
-// Открытие модального окна с передачей только ID товара
 const openEditModal = (product) => {
-  editingProductId.value = product.id; // передаем только id
+  editingProductId.value = product.id;
   showEditModal.value = true;
 };
 
-// Закрытие модального окна
 const closeEditModal = () => {
   showEditModal.value = false;
   editingProductId.value = null;
 };
 
-// После успешного обновления товара обновляем список
 const onProductUpdated = () => {
   closeEditModal();
   fetchProducts();
 };
 
-// Загрузка товаров при монтировании
-onMounted(() => {
+watch(() => props.filters, () => {
+  currentPage.value = 1;
   fetchProducts();
+}, { deep: true });
+
+watch(currentPage, () => {
+  fetchProducts();
+});
+
+watch(searchTerm, () => {
+  currentPage.value = 1;
+  fetchProducts();
+});
+
+onMounted(() => {
+  window.addEventListener('search-request', handleSearch);
+  fetchProducts();
+});
+
+onUnmounted(() => {
+  window.removeEventListener('search-request', handleSearch);
 });
 </script>
 

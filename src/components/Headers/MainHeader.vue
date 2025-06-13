@@ -9,8 +9,19 @@
         <a href="#" class="nav-link" @click.prevent="showDeliveryPoints">Пункт выдачи</a>
         <a href="#" class="nav-link" @click.prevent="goToCart">Корзина</a>
         <a href="#" class="nav-link" @click.prevent="handleProfileClick">Профиль</a>
-        <!-- Кнопка "Заказы" теперь вызывает метод openOrdersModal -->
         <a href="#" class="nav-link" @click.prevent="openOrdersModal">Заказы</a>
+
+        <button
+          v-if="isAdmin"
+          class="nav-link secret-button"
+          @click="handleSecretClick"
+          title="Инструменты"
+          aria-label="Инструменты"
+          type="button"
+        >
+          <img src="@/assets/icons/gear-white.svg" alt="Инструменты" class="icon-default" />
+          <img src="@/assets/icons/gear-pink.svg" alt="Инструменты" class="icon-hover" />
+        </button>
       </div>
 
       <div class="nav-right">
@@ -23,60 +34,16 @@
             @keyup.enter="handleSearch"
           />
         </div>
-
-        <button
-          v-if="isAdmin"
-          class="secret-button"
-          @click="handleSecretClick"
-          title="Инструменты"
-        >
-          Инструменты
-        </button>
-
-        <button
-          v-if="isAuthenticated"
-          class="logout-button"
-          @click="handleLogout"
-        >
-          Выйти
-        </button>
       </div>
     </div>
 
     <!-- Модальные окна -->
-    <RegisterModal
-      v-if="showRegister"
-      @close="showRegister = false"
-      @switchToLogin="switchToLogin"
-    />
-    <LoginModal
-      v-if="showLogin"
-      @close="showLogin = false"
-      @switchToRegister="switchToRegister"
-      @loginSuccess="showProfileModal"
-    />
-    <ProfileModal
-      v-if="showProfile"
-      @close="showProfile = false"
-      @logout="handleLogout"
-    />
-
-    <PointsModal
-      v-show="store.state.showDeliveryModal"
-      @close="store.commit('setShowDeliveryModal', false)"
-      @select="handlePointSelect"
-    />
-
-    <AdminPanelModal
-      v-if="showAdminModal"
-      @close="showAdminModal = false"
-    />
-
-    <!-- Модалка заказов с управлением видимостью через showOrdersModal -->
-    <MyOrdersModal
-      v-if="showOrdersModal"
-      @close="showOrdersModal = false"
-    />
+    <RegisterModal v-if="showRegister" @close="showRegister = false" @switchToLogin="switchToLogin" />
+    <LoginModal v-if="showLogin" @close="showLogin = false" @switchToRegister="switchToRegister" @loginSuccess="showProfileModal" />
+    <ProfileModal v-if="showProfile" @close="showProfile = false" @logout="handleLogout" />
+    <PointsModal v-show="store.state.showDeliveryModal" @close="store.commit('setShowDeliveryModal', false)" @select="handlePointSelect" />
+    <AdminPanelModal v-if="showAdminModal" @close="showAdminModal = false" />
+    <MyOrdersModal v-if="showOrdersModal" @close="showOrdersModal = false" />
   </header>
 </template>
 
@@ -106,19 +73,13 @@ export default {
     const router = useRouter();
     const store = useStore();
 
-    // Поисковый запрос
     const searchQuery = ref("");
-
-    // Флаги отображения модальных окон
     const showRegister = ref(false);
     const showLogin = ref(false);
     const showProfile = ref(false);
     const showAdminModal = ref(false);
-
-    // Флаг отображения модалки заказов
     const showOrdersModal = ref(false);
 
-    // Обработчик поиска по нажатию Enter
     const handleSearch = () => {
       if (router.currentRoute.value.path !== "/") {
         router.push("/");
@@ -130,25 +91,19 @@ export default {
       );
     };
 
-    // Обработчик выбора пункта выдачи
     const handlePointSelect = (point) => {
       store.commit("setSelectedPoint", point);
       store.commit("setShowDeliveryModal", false);
     };
 
-    // Проверка, авторизован ли пользователь
     const isAuthenticated = computed(() => store.state.user.loggedIn);
-
-    // Роль пользователя
     const userRole = computed(() => store.state.user?.role || null);
 
-    // Проверка, является ли пользователь админом
     const isAdmin = computed(() => {
       const role_id = Number(userRole.value);
       return role_id === 1 || role_id === 2;
     });
 
-    // Открыть модалку выбора пункта выдачи
     const showDeliveryPoints = () => {
       store.commit("setShowDeliveryModal", true);
     };
@@ -162,7 +117,7 @@ export default {
       showLogin,
       showProfile,
       showAdminModal,
-      showOrdersModal,      // реактивный флаг видимости модалки заказов
+      showOrdersModal,
       handlePointSelect,
       showDeliveryPoints,
       isAuthenticated,
@@ -170,7 +125,6 @@ export default {
     };
   },
   methods: {
-    // Переименованный метод для открытия модалки заказов
     openOrdersModal() {
       this.showOrdersModal = true;
     },
@@ -211,46 +165,54 @@ export default {
 </script>
 
 <style scoped>
-/* Ваши стили */
-.secret-button {
-  background-color: #c84b9e;
-  color: white;
-  border: none;
-  border-radius: 20px;
-  padding: 8px 16px;
-  margin-left: 15px;
-  font-size: 16px;
-  cursor: pointer;
-  transition: background-color 0.3s ease, transform 0.2s ease;
-}
-.secret-button:hover {
-  background-color: #ff85c1;
-  transform: scale(1.05);
-}
-.nav-bar {
-  display: flex;
-  justify-content: center;
-  align-items: center;
+/* Шапка на всю ширину экрана */
+.header {
+  width: 100%;
   background-color: #1a1a2e;
-  padding: 15px 30px;
   position: fixed;
   top: 0;
   left: 0;
-  right: 0;
   z-index: 2;
   animation: slideDown 0.5s ease-out;
 }
-.header {
-  background-color: #0f0f1f;
-  color: #ffffff;
-  padding: 0;
-  box-shadow: 0 4px 12px rgba(200, 75, 158, 0.4);
-  position: relative;
+
+/* Контейнер для контента с ограничением по ширине и центровкой */
+.nav-bar {
+  max-width: 1200px; /* Максимальная ширина содержимого */
+  margin: 0 auto;    /* Центрирование */
+  padding: 15px 20px;
+  display: flex;
+  justify-content: space-between; /* Распределение элементов */
+  align-items: center;
 }
+
+/* Основные блоки навигации */
+.nav-left,
+.nav-center,
+.nav-right {
+  display: flex;
+  align-items: center;
+}
+
+/* Левый блок — логотип */
 .nav-left {
-  position: absolute;
-  left: 30px;
+  flex: 1;
 }
+
+/* Центр — ссылки */
+.nav-center {
+  flex: 2;
+  justify-content: center;
+  gap: 30px;
+}
+
+/* Правый блок — поиск */
+.nav-right {
+  flex: 1;
+  justify-content: flex-end;
+}
+
+/* Название магазина */
 .store-name {
   font-family: 'Inter', sans-serif;
   font-size: 24px;
@@ -261,16 +223,13 @@ export default {
   text-decoration: none;
   transition: color 0.3s ease, transform 0.3s ease;
 }
+
 .store-name:hover {
   color: #ff85c1;
   transform: scale(1.05);
 }
-.nav-center {
-  display: flex;
-  gap: 30px;
-  justify-content: center;
-  flex: 2;
-}
+
+/* Ссылки навигации */
 .nav-link {
   font-family: 'Inter', sans-serif;
   font-size: 20px;
@@ -280,11 +239,16 @@ export default {
   position: relative;
   transition: color 0.3s ease, transform 0.3s ease;
   cursor: pointer;
+  line-height: 28px;
+  display: flex;
+  align-items: center;
 }
+
 .nav-link:hover {
   color: #c84b9e;
   transform: scale(1.1);
 }
+
 .nav-link:after {
   content: '';
   position: absolute;
@@ -297,16 +261,13 @@ export default {
   transform-origin: bottom right;
   transition: transform 0.3s ease;
 }
+
 .nav-link:hover:after {
   transform: scaleX(1);
   transform-origin: bottom left;
 }
-.nav-right {
-  position: absolute;
-  right: 30px;
-  display: flex;
-  align-items: center;
-}
+
+/* Контейнер поиска */
 .search-container {
   display: flex;
   align-items: center;
@@ -316,6 +277,8 @@ export default {
   border: 1px solid #444;
   animation: fadeIn 1s ease-out;
 }
+
+/* Поле поиска */
 .search-input {
   background-color: transparent;
   color: #ffffff;
@@ -323,30 +286,62 @@ export default {
   outline: none;
   padding: 8px 10px;
   font-size: 16px;
-  width: 200px;
+  width: 180px;
   transition: width 0.3s ease;
 }
+
 .search-input::placeholder {
   color: #ccc;
 }
+
 .search-input:focus {
-  width: 250px;
+  width: 220px;
 }
-.logout-button {
-  background-color: #c84b9e;
-  color: white;
+
+/* Кнопка "Инструменты" */
+.secret-button {
+  background: none;
   border: none;
-  border-radius: 20px;
-  padding: 8px 16px;
-  margin-left: 20px;
-  font-size: 16px;
   cursor: pointer;
-  transition: background-color 0.3s ease, transform 0.2s ease;
+  padding: 0;
+  margin: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 28px;
+  line-height: 28px;
+  vertical-align: middle;
+  position: relative;
+  width: 24px;
 }
-.logout-button:hover {
-  background-color: #ff85c1;
-  transform: scale(1.05);
+
+.secret-button img {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 22px;
+  height: 22px;
+  transition: opacity 0.3s ease;
 }
+
+.icon-default {
+  opacity: 1;
+}
+
+.icon-hover {
+  opacity: 0;
+}
+
+.secret-button:hover .icon-default {
+  opacity: 0;
+}
+
+.secret-button:hover .icon-hover {
+  opacity: 1;
+}
+
+/* Анимации */
 @keyframes slideDown {
   from {
     opacity: 0;
@@ -357,6 +352,7 @@ export default {
     transform: translateY(0);
   }
 }
+
 @keyframes fadeIn {
   from {
     opacity: 0;

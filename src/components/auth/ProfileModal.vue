@@ -4,58 +4,70 @@
       <h2>Профиль</h2>
       <button @click="handleClose" class="close-btn">×</button>
 
-      <!-- Состояние загрузки -->
       <div v-if="loading" class="loading-state">
         <div class="spinner"></div>
         <p>Загрузка данных...</p>
       </div>
 
-      <!-- Режим просмотра -->
       <div v-else-if="user && !isEditing" class="profile-info">
-        <div class="avatar-placeholder">
-          {{ getInitials(user.name) }}
-        </div>
-        <div class="info-item">
-          <span class="label">Имя:</span>
-          <span class="value">{{ user.name }}</span>
-        </div>
-        <div class="info-item">
-          <span class="label">Email:</span>
-          <span class="value">{{ user.email }}</span>
-        </div>
-        <div v-if="user.telephone" class="info-item">
-          <span class="label">Телефон:</span>
-          <span class="value">{{ user.telephone }}</span>
-        </div>
+        <div class="avatar-placeholder">{{ getInitials(user.name) }}</div>
+        <div class="info-item"><span class="label">Имя:</span> <span>{{ user.name }}</span></div>
+        <div class="info-item"><span class="label">Email:</span> <span>{{ user.email }}</span></div>
+        <div v-if="user.telephone" class="info-item"><span class="label">Телефон:</span> <span>{{ user.telephone }}</span></div>
         <div class="actions">
           <button @click="startEditing" class="edit-btn">Редактировать</button>
           <button @click="logout" class="logout-btn">Выйти</button>
         </div>
       </div>
 
-      <!-- Режим редактирования -->
       <div v-else-if="isEditing" class="edit-form">
         <div class="form-group">
           <label for="name">Имя:</label>
-          <input id="name" v-model="editForm.name" type="text" class="form-input" />
+          <input
+            id="name"
+            v-model="editForm.name"
+            type="text"
+            class="form-input"
+          />
+          <!-- Ошибка с применением стиля из примера -->
+          <div v-if="validationErrors.name" class="error-message">{{ validationErrors.name[0] }}</div>
         </div>
+
         <div class="form-group">
           <label for="email">Email:</label>
-          <input id="email" v-model="editForm.email" type="email" class="form-input" />
+          <input
+            id="email"
+            v-model="editForm.email"
+            type="email"
+            class="form-input"
+          />
+          <div v-if="validationErrors.email" class="error-message">{{ validationErrors.email[0] }}</div>
         </div>
+
         <div class="form-group">
           <label for="telephone">Телефон:</label>
-          <input id="telephone" v-model="editForm.telephone" type="tel" class="form-input" />
+          <input
+            id="telephone"
+            v-model="editForm.telephone"
+            type="tel"
+            class="form-input"
+          />
+          <div v-if="validationErrors.telephone" class="error-message">{{ validationErrors.telephone[0] }}</div>
         </div>
+
         <div class="form-actions">
           <button @click="saveChanges" class="save-btn" :disabled="isSaving">
-            {{ isSaving ? 'Сохранение...' : 'Сохранить' }}
+            {{ isSaving ? "Сохранение..." : "Сохранить" }}
           </button>
           <button @click="cancelEditing" class="cancel-btn">Отмена</button>
         </div>
+
+        <!-- Общая ошибка -->
+        <div v-if="errorMessage" class="error-message" style="margin-top: 15px;">
+          {{ errorMessage }}
+        </div>
       </div>
 
-      <!-- Ошибка загрузки -->
       <div v-else class="error-state">
         <p class="error-message">⚠️ Не удалось загрузить данные профиля</p>
         <button @click="retryLoading" class="retry-btn">Повторить попытку</button>
@@ -64,6 +76,7 @@
     </div>
   </div>
 </template>
+
 
 <script>
 import api from "@/services/api";
@@ -82,13 +95,15 @@ export default {
         name: "",
         email: "",
         telephone: ""
-      }
+      },
+      validationErrors: {} // Ошибки валидации для полей формы
     };
   },
   async mounted() {
     await this.loadUserData();
   },
   methods: {
+    // Загрузка данных пользователя
     async loadUserData() {
       try {
         this.loading = true;
@@ -118,16 +133,25 @@ export default {
       }
     },
 
+    // Получение инициалов пользователя для аватара
     getInitials(name) {
-      return name.split(" ").map(part => part[0]).join("").toUpperCase();
+      return name
+        .split(" ")
+        .map((part) => part[0])
+        .join("")
+        .toUpperCase();
     },
 
+    // Начать редактирование
     startEditing() {
       this.isEditing = true;
+      this.validationErrors = {}; // очистка ошибок при начале редактирования
     },
 
+    // Отмена редактирования, восстановление данных
     cancelEditing() {
       this.isEditing = false;
+      this.validationErrors = {};
       this.editForm = {
         name: this.user.name,
         email: this.user.email,
@@ -135,9 +159,12 @@ export default {
       };
     },
 
+    // Сохранение изменений с обработкой ошибок валидации
     async saveChanges() {
       try {
         this.isSaving = true;
+        this.validationErrors = {}; // очищаем ошибки перед отправкой
+
         const token = localStorage.getItem("auth_token");
 
         const response = await api.patch("/profile", this.editForm, {
@@ -148,7 +175,7 @@ export default {
 
         const updatedUser = response.data.data;
 
-        // Обновляем локального пользователя
+        // Обновляем данные пользователя в компоненте
         this.user.name = updatedUser.name;
         this.user.email = updatedUser.email;
         this.user.telephone = updatedUser.telephone;
@@ -156,29 +183,50 @@ export default {
         this.isEditing = false;
         this.$emit("profile-updated", this.user);
       } catch (error) {
-        console.error("Ошибка при сохранении:", error);
-        alert(error.response?.data?.message || "Ошибка при сохранении данных");
+        this.validationErrors = {};
+
+        if (error.response && error.response.data) {
+          const data = error.response.data;
+
+          if (data.errors) {
+            // Записываем ошибки валидации в объект для показа в форме
+            this.validationErrors = data.errors;
+          } else if (data.message) {
+            alert(data.message);
+          } else {
+            alert("Ошибка при сохранении данных");
+          }
+        } else {
+          alert("Ошибка при сохранении данных");
+        }
       } finally {
         this.isSaving = false;
       }
     },
 
+    // Выход из профиля
     logout() {
       localStorage.removeItem("auth_token");
       this.$emit("logout");
       this.$emit("close");
     },
 
+    // Принудительный выход при 401
     handleForceLogout() {
       this.logout();
     },
 
+    // Повторная загрузка данных
     retryLoading() {
       this.loadUserData();
     },
 
+    // Закрытие модального окна с подтверждением если есть несохранённые изменения
     handleClose() {
-      if (this.isEditing && !confirm("У вас есть несохраненные изменения. Закрыть без сохранения?")) {
+      if (
+        this.isEditing &&
+        !confirm("У вас есть несохраненные изменения. Закрыть без сохранения?")
+      ) {
         return;
       }
       this.$emit("close");
@@ -188,6 +236,16 @@ export default {
 </script>
 
 <style scoped>
+.error-message {
+  color: #ff7a7a;
+  background: rgba(255, 122, 122, 0.1);
+  padding: 10px;
+  border-radius: 6px;
+  font-size: 14px;
+  text-align: center;
+  margin-top: 8px;
+}
+
 .modal-overlay {
   position: fixed;
   top: 0;
@@ -209,10 +267,10 @@ export default {
   width: 100%;
   max-width: 450px;
   border: 2px solid #c84b9e;
-  box-shadow: 0 0 30px rgba(200, 75, 158, 0.6);  position: relative;
+  box-shadow: 0 0 30px rgba(200, 75, 158, 0.6);
+  position: relative;
   animation: slideUp 0.3s ease;
   color: #fff;
-
 }
 
 .close-btn {
@@ -354,6 +412,18 @@ label {
   box-shadow: 0 0 0 2px rgba(255, 133, 193, 0.3);
 }
 
+/* Подсветка ошибки у input */
+.input-error {
+  border-color: #ff6464 !important;
+  box-shadow: 0 0 5px 1px rgba(255, 100, 100, 0.7);
+}
+
+.error-text {
+  color: #ff6464;
+  font-size: 14px;
+  margin-top: 5px;
+}
+
 .form-actions {
   display: flex;
   gap: 15px;
@@ -431,8 +501,12 @@ label {
 
 /* Анимации */
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 @keyframes slideUp {
@@ -447,6 +521,8 @@ label {
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 </style>

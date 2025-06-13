@@ -5,18 +5,25 @@
       <!-- Кнопка закрытия -->
       <button class="close-btn" @click="close">×</button>
       <h2 class="modal-title">Авторизация</h2>
+
       <form @submit.prevent="login">
         <!-- Ввод email -->
         <input v-model="email" type="email" placeholder="Email" required />
+
         <!-- Ввод пароля -->
         <input v-model="password" type="password" placeholder="Пароль" required />
+
+        <!-- Сообщение об ошибке -->
+        <div v-if="errorMessage" class="error-message">{{ errorMessage }}</div>
+
         <!-- Кнопка входа -->
         <button type="submit" class="submit-btn">Войти</button>
       </form>
 
       <!-- Ссылка для перехода к регистрации -->
       <p class="switch-to-register">
-        Нет аккаунта? <span @click="switchToRegister" class="link">Зарегистрироваться</span>
+        Нет аккаунта?
+        <span @click="switchToRegister" class="link">Зарегистрироваться</span>
       </p>
     </div>
   </div>
@@ -25,37 +32,57 @@
 <script>
 export default {
   props: ["show"],
-  emits: ["close", "switchToRegister"], // События для управления окнами
+  emits: ["close", "switchToRegister"],
   data() {
     return {
       email: "",
       password: "",
+      errorMessage: "", // Сюда будет записываться сообщение об ошибке
     };
   },
   methods: {
-    // Метод входа
+    // Метод авторизации
     async login() {
+      this.errorMessage = ""; // Сброс ошибки перед отправкой
+
       try {
-        // Вызов Vuex экшена для логина
+        // Отправка запроса на login через Vuex
         await this.$store.dispatch("login", {
           email: this.email,
           password: this.password,
         });
 
-        this.$emit("close"); // Закрываем окно при успехе
+        // Закрываем модалку после успешного входа
+        this.$emit("close");
       } catch (error) {
-        console.error("Ошибка входа:", error);
-        alert("Неверный email или пароль");
+        // Обработка ошибок от сервера (Laravel)
+        if (error.response) {
+          const { status, data } = error.response;
+
+          // Ошибка через ApiException (например, 401)
+          if (data.message) {
+            this.errorMessage = data.message;
+          }
+          // Ошибка валидации формы (422)
+          else if (status === 422 && data.errors) {
+            const firstField = Object.keys(data.errors)[0];
+            this.errorMessage = data.errors[firstField][0];
+          } else {
+            this.errorMessage = "Ошибка сервера. Попробуйте позже.";
+          }
+        } else {
+          this.errorMessage = "Сервер не отвечает.";
+        }
       }
     },
 
-    // Переход к регистрации
+    // Переход на регистрацию
     switchToRegister() {
       this.$emit("switchToRegister");
       this.$emit("close");
     },
 
-    // Закрытие модального окна
+    // Закрытие окна
     close() {
       this.$emit("close");
     },
@@ -63,16 +90,15 @@ export default {
 };
 </script>
 
-
 <style scoped>
-/* Стили для фона модального окна */
+/* Фон модального окна */
 .modal-overlay {
   position: fixed;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(10, 10, 10, 0.8); /* Затемнение фона */
+  background: rgba(10, 10, 10, 0.8);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -80,20 +106,20 @@ export default {
   z-index: 1000;
 }
 
-/* Стили для самого модального окна */
+/* Контейнер модального окна */
 .modal {
-  background: #1a1a2e; /* Темный фон */
+  background: #1a1a2e;
   padding: 40px;
   border-radius: 16px;
   width: 400px;
   max-width: 90%;
   border: 2px solid #c84b9e;
-  box-shadow: 0 0 30px rgba(200, 75, 158, 0.6);  position: relative;
-  animation: slideIn 0.4s ease;
+  box-shadow: 0 0 30px rgba(200, 75, 158, 0.6);
   position: relative;
+  animation: slideIn 0.4s ease;
 }
 
-/* Кнопка закрытия модального окна */
+/* Кнопка закрытия */
 .close-btn {
   position: absolute;
   top: 10px;
@@ -103,14 +129,13 @@ export default {
   font-size: 24px;
   border: none;
   cursor: pointer;
-  transition: color 0.3s ease;
 }
 
 .close-btn:hover {
-  color: #ff6464; /* Розовый неоновый при наведении */
+  color: #ff6464;
 }
 
-/* Заголовок модального окна */
+/* Заголовок */
 .modal-title {
   font-size: 28px;
   color: #fff;
@@ -118,39 +143,38 @@ export default {
   margin-bottom: 20px;
 }
 
-/* Стили для формы внутри модального окна */
+/* Форма */
 form {
   display: flex;
   flex-direction: column;
   gap: 15px;
 }
 
-/* Стили для полей ввода */
+/* Поля ввода */
 input {
   padding: 12px;
   font-size: 16px;
   border-radius: 8px;
   border: none;
   outline: none;
-  background: #2c2c44; /* Темный фон для полей ввода */
+  background: #2c2c44;
   color: #fff;
   transition: all 0.3s ease;
 }
 
 input::placeholder {
-  color: #bbb; /* Серый цвет для placeholder */
+  color: #bbb;
 }
 
-/* Стили при фокусе на поле ввода */
 input:focus {
-  background: #3c3c50; /* Более светлый темный фон при фокусе */
-  box-shadow: 0 0 0 2px #5c6bc0; /* Синий неоновый цвет для фокуса */
+  background: #3c3c50;
+  box-shadow: 0 0 0 2px #5c6bc0;
 }
 
-/* Кнопка для отправки формы */
+/* Кнопка входа */
 .submit-btn {
   padding: 12px;
-  background: #5c6bc0; /* Синий неоновый фон */
+  background: #5c6bc0;
   color: white;
   font-weight: bold;
   font-size: 18px;
@@ -161,10 +185,35 @@ input:focus {
 }
 
 .submit-btn:hover {
-  background: #7986cb; /* Светлый синий при наведении */
+  background: #7986cb;
 }
 
-/* Анимация появления модального окна */
+/* Ошибка авторизации */
+.error-message {
+  color: #ff7a7a;
+  background: rgba(255, 122, 122, 0.1);
+  padding: 10px;
+  border-radius: 6px;
+  font-size: 14px;
+  text-align: center;
+}
+
+/* Переход к регистрации */
+.switch-to-register {
+  margin-top: 15px;
+  text-align: center;
+}
+
+.switch-to-register .link {
+  color: #ff85c1;
+  cursor: pointer;
+}
+
+.switch-to-register .link:hover {
+  text-decoration: underline;
+}
+
+/* Анимации */
 @keyframes fadeIn {
   from {
     opacity: 0;
@@ -174,7 +223,6 @@ input:focus {
   }
 }
 
-/* Анимация скольжения модального окна */
 @keyframes slideIn {
   from {
     transform: translateY(-30px);
@@ -184,20 +232,5 @@ input:focus {
     transform: translateY(0);
     opacity: 1;
   }
-}
-
-/* Стили для ссылки перехода на регистрацию */
-.switch-to-register {
-  margin-top: 15px;
-  text-align: center;
-}
-
-.switch-to-register .link {
-  color: #ff85c1; /* Розовый неоновый для ссылки */
-  cursor: pointer;
-}
-
-.switch-to-register .link:hover {
-  text-decoration: underline;
 }
 </style>
