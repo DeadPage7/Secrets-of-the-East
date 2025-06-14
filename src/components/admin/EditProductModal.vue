@@ -29,9 +29,8 @@
             <label>
               Пол (sex):
               <select v-model.number="form.sex">
-                <option :value="0">Не указан</option>
+                <option :value="0">Женский</option>
                 <option :value="1">Мужской</option>
-                <option :value="2">Женский</option>
               </select>
             </label>
 
